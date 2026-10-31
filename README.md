@@ -38,6 +38,16 @@ pnpm dev          # client: http://localhost:5173 · server: http://localhost:25
 
 Xem `.env.example`. Không commit file `.env`.
 
+Client (build time): `VITE_GAME_URL` — địa chỉ WebSocket game server ở production (vd. `wss://api.chua.example.com`). Dev mặc định `ws://<host>:2567`.
+
+## Multiplayer
+
+- Mỗi khu vực là một room Colyseus (hiện có `chinh-dien`), tối đa 150 người.
+- Server-authoritative: client chỉ gửi ý định `move_to {x,y}` (click) hoặc `dir {x,y}` (phím); server validate bằng Zod, giới hạn 30 tin/giây, mô phỏng di chuyển + va chạm (`packages/shared/src/world.ts`) ở 12 Hz rồi đồng bộ delta.
+- Client nội suy snapshot (trễ 120 ms) nên chuyển động mượt dù server chỉ gửi 12 lần/giây.
+- Rớt mạng ngoài ý muốn: server giữ nhân vật 20 giây để client tự nối lại.
+- Thử nhanh: mở hai cửa sổ (một cửa sổ thường, một cửa sổ ẩn danh) và đăng nhập hai tài khoản khác nhau.
+
 ## API xác thực
 
 | Method | Đường dẫn            | Ghi chú                                                                           |

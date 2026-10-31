@@ -12,11 +12,12 @@ export async function createTestContext() {
   const prisma = createPrisma(config.DATABASE_URL);
   const redis = createRedis(config.REDIS_URL);
   const mailer = new MemoryMailer();
-  const app = await buildApp(config, { prisma, redis, mailer });
+  const { app, accessTokens } = await buildApp(config, { prisma, redis, mailer });
   await app.ready();
 
   return {
     app,
+    accessTokens,
     prisma,
     redis,
     mailer,

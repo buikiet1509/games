@@ -1,0 +1,31 @@
+/** Màu cảnh game (số hex cho Phaser), khớp bảng màu thiết kế. */
+export const C = {
+  paper: 0xf4ebd9,
+  hill: 0xe8dabd,
+  hillFar: 0xeee2c9,
+  sun: 0xf2d58e,
+  ground: 0xead9ba,
+  groundLine: 0xdcc8a3,
+  terrace: 0xefe2c8,
+  red: 0x8b1e1e,
+  redDark: 0x6e1515,
+  red900: 0x5e1212,
+  doorway: 0x3a1a12,
+  gold: 0xc9932e,
+  goldLight: 0xe7c27a,
+  lantern: 0xb23a2a,
+  bronze: 0x8a5a12,
+  bronzeLight: 0xa86e1a,
+  ember: 0xe8643a,
+  trunk: 0x6b4a2e,
+  leaf: 0x4e7a5c,
+  leafLight: 0x6b9a78,
+  skin: 0xebc9a4,
+  shadow: 0x2b1b12,
+  ink: 0x2b1b12,
+  white: 0xffffff,
+  labelBorder: 0xe3d3b3,
+} as const;
+
+export const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;
+export const parseColor = (css: string) => Number.parseInt(css.replace('#', ''), 16);

@@ -59,5 +59,6 @@ export async function buildApp(config: Config, deps: AppDeps) {
     refreshTokens: createRefreshTokens(deps.prisma),
   });
 
-  return Object.assign(app, { accessTokens });
+  // Trả về object bọc ngoài: instance Fastify là thenable nên `await` sẽ "mở" mất thuộc tính gắn thêm.
+  return { app, accessTokens };
 }

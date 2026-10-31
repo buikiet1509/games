@@ -521,3 +521,239 @@ textarea {
     transition: none !important;
   }
 }
+
+/* ---------- Màn chơi ---------- */
+
+.game-layout {
+  display: grid;
+  grid-template-rows: 72px 1fr;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 24px;
+  background: var(--red-700);
+  color: var(--paper);
+  min-width: 0;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 21px;
+  color: #f6e3bd;
+  white-space: nowrap;
+}
+
+.area-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.18);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.area-tab {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #f3dfbc;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.area-tab[aria-current='page'] {
+  background: var(--paper);
+  color: var(--red-700);
+  font-weight: 600;
+}
+
+.area-tab[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  white-space: nowrap;
+}
+
+.online {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #f3dfbc;
+}
+
+.online strong {
+  color: #fff;
+}
+
+.online-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #7fd1a8;
+}
+
+.merit-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.22);
+  color: #f3dfbc;
+  font-size: 14px;
+}
+
+.merit-pill strong {
+  color: #fff;
+}
+
+.account {
+  position: relative;
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 2px solid var(--gold-light);
+  background: var(--gold);
+  color: var(--ink);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.account-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 20;
+  min-width: 200px;
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 16px 40px -12px rgba(43, 27, 18, 0.3);
+}
+
+.account-name {
+  margin: 4px 10px 8px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.account-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.account-menu button:hover {
+  background: var(--cream-deep);
+}
+
+.stage {
+  position: relative;
+  overflow: hidden;
+  background: var(--paper);
+}
+
+.game-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.stage-overlay {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.hud-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  background: rgba(255, 251, 242, 0.94);
+  border: 1px solid var(--border);
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.hud-chip strong {
+  color: var(--ink);
+}
+
+.stage-status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  background: rgba(244, 235, 217, 0.85);
+  color: var(--ink-2);
+  font-weight: 500;
+}
+
+.stage-status p {
+  margin: 0;
+}
+
+@media (max-width: 1100px) {
+  .online {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    gap: 12px;
+    padding: 0 12px;
+  }
+
+  .topbar-brand span,
+  .hud-hint {
+    display: none;
+  }
+
+  .merit-pill {
+    padding: 0 12px;
+  }
+}
