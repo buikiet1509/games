@@ -1,11 +1,25 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
-import { AREAS, type PublicUser } from '@chua/shared';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+import {
+  AREAS,
+  HALL_SEATS,
+  INCENSE_RANGE,
+  canDo,
+  mapFor,
+  type AreaId,
+  type PublicUser,
+} from '@chua/shared';
 import type Phaser from 'phaser';
 import { joinArea, reconnect, type TempleRoom } from '../net/game';
 import { createGame } from '../game/createGame';
 import { logout } from '../auth/session';
 import { LotusLogo } from '../ui/icons';
 import { ArrowRightIcon, IncenseIcon, LogoutIcon } from '../ui/icons-game';
+import { bindRoomToStore, merit, resetStore, showToast } from '../game/store';
+import { ActionBar } from '../ui/game/ActionBar';
+import { BowCard } from '../ui/game/BowCard';
+import { DonationModal } from '../ui/game/DonationModal';
+import { Sidebar } from '../ui/game/Sidebar';
+import { Toasts } from '../ui/game/Toasts';
 
 type Conn =
   | { status: 'connecting' }
@@ -13,24 +27,49 @@ type Conn =
   | { status: 'reconnecting' }
   | { status: 'failed'; message: string };
 
-const CURRENT_AREA = 'chinh-dien' as const;
+/** Các khu đã mở (mốc 6 mở đủ 5 khu). */
+const OPEN_AREAS: readonly AreaId[] = ['san-chua', 'chinh-dien'];
+const CENSER = mapFor('san-chua').obstacles.find((o) => o.id === 'lu-huong')!;
+/** Điểm đứng trước lư hương khi tự đi tới để thắp hương. */
+const CENSER_FRONT = { x: CENSER.x, y: CENSER.y + CENSER.r + 40 };
 const areaName = (id: string) => AREAS.find((a) => a.id === id)?.name ?? id;
+const AREA_HINT: Partial<Record<AreaId, string>> = {
+  'san-chua': 'Nhấp vào sân để di chuyển · bước lên hiên để vào Chính điện',
+};
+
+/** Hàng ghế (1 = gần tượng Phật nhất) của chỗ ngồi tại vị trí (x, y) trong Chính điện. */
+const seatRow = (x: number, y: number) => {
+  const rows = [...new Set(HALL_SEATS.map((s) => s.y))];
+  const i = HALL_SEATS.findIndex((s) => s.x === x && s.y === y);
+  return i < 0 ? null : rows.indexOf(HALL_SEATS[i]!.y) + 1;
+};
 
 export function GameScreen({ user }: { user: PublicUser }) {
   const [conn, setConn] = useState<Conn>({ status: 'connecting' });
   const [attempt, setAttempt] = useState(0);
   const [count, setCount] = useState(0);
+  // Khu đang ở; `from` là khu vừa rời để xuất hiện ở đúng lối vào.
+  const [place, setPlace] = useState<{ area: AreaId; from?: AreaId }>({ area: 'san-chua' });
+  const area = place.area;
+  const [dialog, setDialog] = useState<'bow' | 'donate' | null>(null);
 
   // Kết nối room (và kết nối lại khi rớt mạng).
   useEffect(() => {
     let disposed = false;
     let room: TempleRoom | undefined;
 
+    let unbind = () => {};
     const attach = (r: TempleRoom) => {
       room = r;
+      unbind();
+      unbind = bindRoomToStore(r);
       setConn({ status: 'connected', room: r });
       const sync = () => setCount(r.state.players?.size ?? 0);
       r.onStateChange(sync);
+      // Bước vào lối đi → server báo sang khu khác.
+      r.onMessage('travel', ({ to }: { to: AreaId }) => {
+        if (!disposed) setPlace({ area: to, from: place.area });
+      });
       r.onLeave(async (code) => {
         if (disposed || code === 1000 || code === 4000) return; // chủ động rời
         setConn({ status: 'reconnecting' });
@@ -47,7 +86,7 @@ export function GameScreen({ user }: { user: PublicUser }) {
     };
 
     setConn({ status: 'connecting' });
-    joinArea(CURRENT_AREA)
+    joinArea(place.area, place.from)
       .then((r) => {
         if (disposed) void r.leave();
         else attach(r);
@@ -58,49 +97,162 @@ export function GameScreen({ user }: { user: PublicUser }) {
 
     return () => {
       disposed = true;
+      unbind();
       void room?.leave(true);
     };
-  }, [attempt]);
+  }, [place, attempt]);
+
+  useEffect(() => () => resetStore(), []);
+  useEffect(() => setDialog(null), [area]); // đổi khu thì đóng hộp thoại đang mở
 
   const room = conn.status === 'connected' ? conn.room : undefined;
+  const prayerInput = useRef<HTMLInputElement>(null);
+  const closeDialog = useCallback(() => setDialog(null), []);
+  const pendingIncense = useIncenseAutoWalk(room);
+
+  const lightIncense = () => {
+    if (!room) return;
+    const me = room.state.players.get(room.sessionId);
+    if (me && Math.hypot(me.x - CENSER.x, me.y - CENSER.y) <= INCENSE_RANGE - 10) {
+      room.send('incense');
+    } else {
+      // Ở xa → tự đi tới trước lư hương rồi thắp.
+      room.send('move_to', CENSER_FRONT);
+      pendingIncense.current = Date.now();
+    }
+  };
 
   return (
     <div class="game-layout">
-      <TopBar user={user} online={count} />
-      <div class="stage">
-        {room && <GameCanvas key={room.roomId + room.sessionId} room={room} />}
-        <div class="stage-overlay">
-          <div class="hud-chip">
-            <strong>{areaName(CURRENT_AREA)}</strong> · {count} người tại đây
-          </div>
-          <div class="hud-chip hud-hint">
-            <ArrowRightIcon /> Nhấp vào sân để di chuyển · WASD / phím mũi tên
-          </div>
-        </div>
-        {conn.status !== 'connected' && (
-          <div class="stage-status" role="status">
-            {conn.status === 'failed' ? (
+      <TopBar
+        user={user}
+        online={count}
+        area={area}
+        onSelectArea={(a) => a !== area && setPlace({ area: a })}
+      />
+      <div class="game-body">
+        <div class="stage">
+          {room && <GameCanvas key={room.roomId + room.sessionId} room={room} area={area} />}
+          <div class="stage-overlay">
+            <div class="hud-chip">
+              <strong>{areaName(area)}</strong> · {count} người tại đây
+            </div>
+            {area === 'chinh-dien' ? (
               <>
-                <p>{conn.message}</p>
+                <div class="hud-chip hud-hint">
+                  {room && <SeatInfo room={room} />} · bấm Lạy Phật để lạy
+                </div>
                 <button
                   type="button"
-                  class="btn btn-primary"
-                  onClick={() => setAttempt((n) => n + 1)}
+                  class="hud-chip hud-button"
+                  onClick={() => setPlace({ area: 'san-chua', from: 'chinh-dien' })}
                 >
-                  Vào lại
+                  <ArrowRightIcon class="flip" /> Ra Sân chùa
                 </button>
               </>
             ) : (
-              <p>{conn.status === 'reconnecting' ? 'Đang kết nối lại…' : 'Đang vào chùa…'}</p>
+              <div class="hud-chip hud-hint">
+                <ArrowRightIcon /> {AREA_HINT[area]} · WASD / phím mũi tên
+              </div>
             )}
           </div>
-        )}
+          {room && (
+            <ActionBar
+              area={area}
+              onIncense={lightIncense}
+              onBow={() => setDialog('bow')}
+              onDonate={() => setDialog('donate')}
+              onBell={() => room.send('bell')}
+              onPray={() => prayerInput.current?.focus()}
+            />
+          )}
+          <Toasts />
+          {conn.status !== 'connected' && (
+            <div class="stage-status" role="status">
+              {conn.status === 'failed' ? (
+                <>
+                  <p>{conn.message}</p>
+                  <button
+                    type="button"
+                    class="btn btn-primary"
+                    onClick={() => setAttempt((n) => n + 1)}
+                  >
+                    Vào lại
+                  </button>
+                </>
+              ) : (
+                <p>
+                  {conn.status === 'reconnecting'
+                    ? 'Đang kết nối lại…'
+                    : `Đang vào ${areaName(area)}…`}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+        <Sidebar
+          canPray={canDo(area, 'prayer')}
+          selfName={user.username}
+          prayerInputRef={prayerInput}
+          onPray={(text) => room?.send('prayer', { text })}
+          onReport={(activityId) => room?.send('report', { activityId })}
+        />
       </div>
+      {room && dialog === 'bow' && <BowCard send={(t) => room.send(t)} onClose={closeDialog} />}
+      {room && dialog === 'donate' && (
+        <DonationModal
+          balance={merit.value ?? user.merit}
+          onSubmit={(msg) => room.send('donate', msg)}
+          onClose={closeDialog}
+        />
+      )}
     </div>
   );
 }
 
-function GameCanvas({ room }: { room: TempleRoom }) {
+/** "Bạn ngồi hàng N" — chỗ ngồi do server xếp, gần tượng Phật trước. */
+function SeatInfo({ room }: { room: TempleRoom }) {
+  const [row, setRow] = useState<number | null>(null);
+  useEffect(() => {
+    const update = () => {
+      const me = room.state.players?.get(room.sessionId);
+      if (me) setRow(seatRow(me.x, me.y));
+    };
+    update();
+    room.onStateChange(update);
+    return () => room.onStateChange.remove(update);
+  }, [room]);
+  return <span>{row ? `Bạn ngồi hàng ${row}` : 'Đang xếp chỗ ngồi…'}</span>;
+}
+
+/**
+ * Khi bấm "Thắp hương" lúc ở xa: nhân vật tự đi tới lư hương, tới nơi thì thắp.
+ * Huỷ nếu sau 8 giây vẫn chưa tới (bị người chơi điều khiển đi chỗ khác).
+ */
+function useIncenseAutoWalk(room: TempleRoom | undefined) {
+  const pending = useRef<number | null>(null);
+  useEffect(() => {
+    if (!room) return;
+    const check = () => {
+      if (pending.current === null) return;
+      if (Date.now() - pending.current > 8000) {
+        pending.current = null;
+        showToast('Hãy đến gần lư hương để thắp hương', { tone: 'error' });
+        return;
+      }
+      const me = room.state.players.get(room.sessionId);
+      if (me && !me.moving && Math.hypot(me.x - CENSER.x, me.y - CENSER.y) <= INCENSE_RANGE) {
+        pending.current = null;
+        room.send('incense');
+      }
+    };
+    room.onStateChange(check);
+    return () => room.onStateChange.remove(check);
+  }, [room]);
+  return pending;
+}
+
+function GameCanvas({ room, area }: { room: TempleRoom; area: AreaId }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let game: Phaser.Game | undefined;
@@ -112,17 +264,27 @@ function GameCanvas({ room }: { room: TempleRoom }) {
     ])
       .catch(() => {})
       .then(() => {
-        if (!cancelled && ref.current) game = createGame(ref.current, room);
+        if (!cancelled && ref.current) game = createGame(ref.current, room, area);
       });
     return () => {
       cancelled = true;
       game?.destroy(true);
     };
-  }, [room]);
-  return <div ref={ref} class="game-canvas" aria-label="Sân chùa" />;
+  }, [room, area]);
+  return <div ref={ref} class="game-canvas" aria-label={areaName(area)} />;
 }
 
-function TopBar({ user, online }: { user: PublicUser; online: number }) {
+function TopBar({
+  user,
+  online,
+  area,
+  onSelectArea,
+}: {
+  user: PublicUser;
+  online: number;
+  area: AreaId;
+  onSelectArea: (a: AreaId) => void;
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   return (
     <header class="topbar">
@@ -132,15 +294,17 @@ function TopBar({ user, online }: { user: PublicUser; online: number }) {
       </div>
       <nav class="area-tabs" aria-label="Khu vực">
         {AREAS.map((a) => {
-          const current = a.id === CURRENT_AREA;
+          const current = a.id === area;
+          const open = OPEN_AREAS.includes(a.id);
           return (
             <button
               key={a.id}
               type="button"
               class="area-tab"
               aria-current={current ? 'page' : undefined}
-              aria-disabled={current ? undefined : 'true'}
-              title={current ? undefined : 'Sắp mở'}
+              aria-disabled={open ? undefined : 'true'}
+              title={open ? undefined : 'Sắp mở'}
+              onClick={() => open && onSelectArea(a.id)}
             >
               {a.name}
             </button>
@@ -154,7 +318,7 @@ function TopBar({ user, online }: { user: PublicUser; online: number }) {
         </span>
         <span class="merit-pill">
           <IncenseIcon />
-          Phước <strong>{user.merit.toLocaleString('vi-VN')}</strong>
+          Phước <strong>{(merit.value ?? user.merit).toLocaleString('vi-VN')}</strong>
         </span>
         <div class="account">
           <button

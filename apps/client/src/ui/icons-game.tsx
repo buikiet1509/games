@@ -34,3 +34,49 @@ export const LogoutIcon = ({ size = 18, ...p }: P) => (
     <path d="M10 16l-4-4 4-4M6 12h10" />
   </svg>
 );
+
+export const BowIcon = ({ size = 22, ...p }: P) => (
+  <svg width={size} height={size} {...base} {...p}>
+    <circle cx="12" cy="4.5" r="2" />
+    <path d="M12 7v5l-4 3M12 12l4 3M7 20h10" />
+  </svg>
+);
+
+export const DonateIcon = ({ size = 22, ...p }: P) => (
+  <svg width={size} height={size} {...base} {...p}>
+    <rect x="4" y="8" width="16" height="11" rx="2" />
+    <path d="M9 8V6a3 3 0 0 1 6 0v2M10 13h4" />
+  </svg>
+);
+
+export const BellIcon = ({ size = 22, ...p }: P) => (
+  <svg width={size} height={size} {...base} {...p}>
+    <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15L6 16Z" />
+    <path d="M10 20.5a2 2 0 0 0 4 0M12 3v2" />
+  </svg>
+);
+
+export const PrayIcon = ({ size = 22, ...p }: P) => (
+  <svg width={size} height={size} {...base} {...p}>
+    <path d="M5 5h14v10H10l-4 4v-4H5z" />
+    <path d="M9 9.5h6M9 12h4" />
+  </svg>
+);
+
+export const SendIcon = ({ size = 20, ...p }: P) => (
+  <svg width={size} height={size} {...base} {...p}>
+    <path d="M20 4 9.5 14.5M20 4l-6.5 16-4-7.5L2 9z" />
+  </svg>
+);
+
+export const FlagIcon = ({ size = 15, ...p }: P) => (
+  <svg width={size} height={size} {...base} {...p}>
+    <path d="M5 21V4M5 4h11l-2 4 2 4H5" />
+  </svg>
+);
+
+export const CloseIcon = ({ size = 18, ...p }: P) => (
+  <svg width={size} height={size} {...base} {...p}>
+    <path d="M6 6l12 12M18 6 6 18" />
+  </svg>
+);

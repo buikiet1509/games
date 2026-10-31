@@ -13,6 +13,7 @@ export interface RemotePlayer {
   x: number;
   y: number;
   moving: boolean;
+  action: string;
   onChange(cb: () => void): () => void;
 }
 
@@ -32,12 +33,12 @@ export type TempleRoom = Room<TempleStateView>;
 const isAuthError = (err: unknown) =>
   typeof err === 'object' && err !== null && (err as { code?: number }).code === 401;
 
-/** Vào một khu vực. Access token hết hạn → refresh rồi thử lại một lần. */
-export async function joinArea(areaId: AreaId): Promise<TempleRoom> {
+/** Vào một khu vực (`from`: khu vừa rời, để đứng ở đúng lối vào). Token hết hạn → refresh rồi thử lại. */
+export async function joinArea(areaId: AreaId, from?: AreaId): Promise<TempleRoom> {
   const attempt = () => {
     const client = new Client(GAME_URL);
     client.auth.token = getAccessToken() ?? '';
-    return client.joinOrCreate<TempleStateView>(areaId);
+    return client.joinOrCreate<TempleStateView>(areaId, from ? { from } : {});
   };
   try {
     return await attempt();

@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
 import { WORLD } from '@chua/shared';
-import { TempleScene } from './TempleScene';
+import { CourtyardScene } from './CourtyardScene';
+import { HallScene } from './HallScene';
 import type { TempleRoom } from '../net/game';
 import { C } from './palette';
 
-export function createGame(parent: HTMLElement, room: TempleRoom) {
+export function createGame(parent: HTMLElement, room: TempleRoom, areaId: string) {
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
@@ -17,6 +18,7 @@ export function createGame(parent: HTMLElement, room: TempleRoom) {
     banner: false,
     audio: { noAudio: true },
   });
-  game.scene.add('temple', TempleScene, true, { room });
+  const Scene = areaId === 'chinh-dien' ? HallScene : CourtyardScene;
+  game.scene.add(areaId, Scene, true, { room });
   return game;
 }

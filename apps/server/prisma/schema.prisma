@@ -14,10 +14,14 @@ model User {
   passwordHash   String
   robeColor      String
   merit          Int                  @default(100)
+  /// Ngày điểm danh gần nhất theo giờ Việt Nam (YYYY-MM-DD).
+  lastCheckIn    String?
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
   refreshTokens  RefreshToken[]
   passwordResets PasswordResetToken[]
+  donations      Donation[]
+  prayers        Prayer[]
 }
 
 /// Refresh token xoay vòng: mỗi lần refresh tạo token mới cùng familyId, token cũ bị thu hồi.
@@ -47,4 +51,45 @@ model PasswordResetToken {
   createdAt DateTime  @default(now())
 
   @@index([userId])
+}
+
+/// Lịch sử công đức (điểm phước trong game, không phải tiền thật). Nguồn để dựng lại bảng công đức.
+model Donation {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount     Int
+  dedication String
+  prayer     String?
+  showName   Boolean
+  areaId     String
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+}
+
+/// Lời nguyện; id do server sinh trước để báo cáo được ngay cả khi chưa ghi xuống DB (ghi theo lô).
+model Prayer {
+  id        String   @id @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  text      String
+  areaId    String
+  createdAt DateTime
+
+  @@index([createdAt])
+}
+
+model Report {
+  id           String   @id @default(uuid()) @db.Uuid
+  reporterId   String   @db.Uuid
+  targetUserId String   @db.Uuid
+  activityId   String
+  text         String
+  status       String   @default("open")
+  createdAt    DateTime @default(now())
+
+  @@unique([reporterId, activityId])
+  @@index([status, createdAt])
 }

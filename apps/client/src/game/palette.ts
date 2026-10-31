@@ -21,10 +21,19 @@ export const C = {
   leaf: 0x4e7a5c,
   leafLight: 0x6b9a78,
   skin: 0xebc9a4,
+  skinShade: 0xd6ab82,
   shadow: 0x2b1b12,
   ink: 0x2b1b12,
   white: 0xffffff,
   labelBorder: 0xe3d3b3,
+  jade: 0x2f6b5a,
+  goldDeep: 0xa8761f,
+  lotusGold: 0xd9a441,
+  lotusPink: 0xe9a0a6,
+  candle: 0xf3e6c8,
+  woodFloor: 0xd8b47c,
+  woodLine: 0xc49a5e,
+  stone: 0xd8c4a0,
 } as const;
 
 export const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;

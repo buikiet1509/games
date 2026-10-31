@@ -10,6 +10,8 @@ import { createAccessTokens } from './auth/accessToken';
 import { createRefreshTokens } from './auth/refreshTokens';
 import { createMailer, type Mailer } from './auth/mailer';
 import { authRoutes } from './auth/routes';
+import { createLeaderboard } from './services/leaderboard';
+import { z } from 'zod';
 
 export interface AppDeps {
   prisma: PrismaClient;
@@ -49,6 +51,17 @@ export async function buildApp(config: Config, deps: AppDeps) {
   const accessTokens = createAccessTokens(config.JWT_ACCESS_SECRET);
 
   app.get('/health', async () => ({ status: 'ok', uptime: process.uptime() }));
+
+  const leaderboard = createLeaderboard(deps.redis);
+  const leaderboardQuery = z.object({
+    period: z.enum(['day', 'week', 'all']).default('day'),
+    limit: z.coerce.number().int().min(1).max(50).default(10),
+  });
+  app.get('/api/leaderboard', async (request) => {
+    const q = leaderboardQuery.safeParse(request.query);
+    if (!q.success) throw new HttpError(400, 'Tham số không hợp lệ');
+    return { period: q.data.period, entries: await leaderboard.top(q.data.period, q.data.limit) };
+  });
 
   await authRoutes(app, {
     config,

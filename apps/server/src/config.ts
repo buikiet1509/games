@@ -15,6 +15,18 @@ const envSchema = z
     JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET cần tối thiểu 32 ký tự'),
     MAIL_FROM: z.string().default('Chùa An Lạc <no-reply@localhost>'),
     RESEND_API_KEY: z.string().optional(),
+    /** Từ cấm bổ sung cho bộ lọc lời nguyện, phân tách bằng dấu phẩy. */
+    PROFANITY_EXTRA: z
+      .string()
+      .optional()
+      .transform((v) =>
+        v
+          ? v
+              .split(',')
+              .map((w) => w.trim())
+              .filter(Boolean)
+          : [],
+      ),
   })
   .refine((c) => c.NODE_ENV !== 'production' || !c.JWT_ACCESS_SECRET.includes('dev-only'), {
     message: 'Không được dùng JWT secret mặc định ở production',

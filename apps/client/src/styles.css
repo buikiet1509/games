@@ -720,6 +720,24 @@ textarea {
   color: var(--ink);
 }
 
+.hud-button {
+  pointer-events: auto;
+  min-height: 44px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.hud-button:hover {
+  background: var(--card);
+  border-color: var(--border-input);
+}
+
+.flip {
+  transform: scaleX(-1);
+}
+
 .stage-status {
   position: absolute;
   inset: 0;
@@ -755,5 +773,554 @@ textarea {
 
   .merit-pill {
     padding: 0 12px;
+  }
+}
+
+/* ---------- Bố cục màn chơi có cột phải ---------- */
+
+.game-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  min-height: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.icon-button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: var(--cream-deep);
+  color: var(--ink-2);
+  cursor: pointer;
+  flex: none;
+}
+
+.icon-button:hover {
+  color: var(--ink);
+}
+
+.gold {
+  color: var(--gold-text);
+}
+
+/* ---------- Thanh hành động ---------- */
+
+.action-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 20px;
+  background: rgba(255, 251, 242, 0.96);
+  border: 1px solid var(--border);
+  box-shadow: 0 18px 40px -18px rgba(43, 27, 18, 0.35);
+}
+
+.action {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100px;
+  min-height: 72px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--cream-deep);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.action:hover:not([aria-disabled='true']) {
+  background: #eadbb9;
+}
+
+.action-primary {
+  background: var(--red);
+  color: #fff;
+}
+
+.action-primary:hover:not([aria-disabled='true']) {
+  background: var(--red-700);
+}
+
+.action[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.action-hint {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Toast ---------- */
+
+.toasts {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px 10px 10px;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 30px -12px rgba(43, 27, 18, 0.35);
+  font-size: 14px;
+  animation: toast-in 0.2s ease-out;
+}
+
+.toast-icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--jade);
+  flex: none;
+}
+
+.toast-error .toast-icon {
+  background: var(--red);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* ---------- Cột phải ---------- */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--card);
+  border-left: 1px solid var(--border);
+}
+
+.leaderboard {
+  padding: 24px 20px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-title {
+  font-size: 20px;
+  margin-bottom: 14px;
+}
+
+.lb-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 0 14px 0 10px;
+  border-radius: 12px;
+  background: #f6eedd;
+}
+
+.lb-first {
+  background: #f6e2b4;
+}
+
+.lb-rank {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--border);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.lb-first .lb-rank {
+  background: var(--gold);
+  color: #fff;
+}
+
+.lb-name {
+  flex: 1;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-score {
+  font-weight: 700;
+  color: var(--gold-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.feed-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 18px 20px 0;
+}
+
+.section-title {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.feed {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 12px;
+}
+
+.feed-line,
+.feed-muted {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.feed-line strong {
+  color: var(--ink);
+}
+
+.feed-muted {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.prayer-card {
+  position: relative;
+  margin-top: 6px;
+  padding: 10px 40px 10px 12px;
+  border-radius: 12px;
+  background: #f6eedd;
+  font-size: 14px;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+.prayer-card p {
+  margin: 0;
+}
+
+.prayer-card strong {
+  color: var(--ink);
+}
+
+.report-button {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.prayer-card:hover .report-button,
+.report-button:focus-visible {
+  opacity: 1;
+}
+
+.report-button:disabled {
+  color: var(--jade);
+  cursor: default;
+}
+
+.empty {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 14px;
+}
+
+.prayer-form {
+  display: flex;
+  gap: 10px;
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.send-button {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  background: var(--red);
+  color: #fff;
+  cursor: pointer;
+}
+
+.send-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* ---------- Hộp thoại ---------- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(36, 18, 12, 0.72);
+  animation: fade-in 0.15s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.bow-card,
+.donate-card {
+  position: relative;
+  width: 100%;
+  background: var(--card);
+  border-radius: var(--radius-card);
+  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.5);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+
+.bow-card {
+  max-width: 330px;
+  padding: 32px 28px 28px;
+  text-align: center;
+}
+
+.card-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+
+.bow-figure {
+  display: grid;
+  place-items: center;
+  margin: 18px 0 12px;
+}
+
+.bow-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.bow-dots span {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.bow-dots span.on {
+  background: var(--red);
+}
+
+.bow-help {
+  margin: 0 0 18px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.bow-button {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.donate-card {
+  max-width: 500px;
+  padding: 30px 30px 28px;
+}
+
+.donate-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.donate-header .card-subtitle {
+  margin-bottom: 18px;
+}
+
+.tier-group {
+  border: 0;
+  padding: 0;
+  margin: 0 0 18px;
+}
+
+.tier-group legend {
+  padding: 0;
+  margin-bottom: 10px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.tiers {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.tier {
+  position: relative;
+  cursor: pointer;
+}
+
+.tier input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.tier span {
+  display: grid;
+  place-items: center;
+  height: 54px;
+  border-radius: 12px;
+  border: 1px solid var(--border-input);
+  background: #fff;
+  font-weight: 700;
+  font-size: 17px;
+}
+
+.tier input:checked + span {
+  border: 2px solid var(--red);
+  background: var(--red-tint);
+  color: var(--red);
+}
+
+.tier input:focus-visible + span {
+  box-shadow: var(--focus-ring);
+}
+
+.tier input:disabled + span {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.textarea {
+  height: auto;
+  padding: 12px 14px;
+  resize: vertical;
+  min-height: 90px;
+  line-height: 1.5;
+}
+
+select.input {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%234a3527' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='m3 4.5 3-3 3 3M3 7.5l3 3 3-3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+.char-count {
+  font-size: 12px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.donate-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.8fr;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+/* ---------- Responsive màn chơi ---------- */
+
+@media (max-width: 1100px) {
+  .game-body {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+}
+
+@media (max-width: 900px) {
+  /* Mốc 7 sẽ biến cột phải thành ngăn kéo trượt lên trên điện thoại. */
+  .game-body {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .action {
+    width: 64px;
+    min-height: 60px;
+    font-size: 11px;
+  }
+
+  .action-bar {
+    gap: 4px;
+    padding: 6px;
+    bottom: 12px;
   }
 }

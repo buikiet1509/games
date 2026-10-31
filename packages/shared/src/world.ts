@@ -1,11 +1,21 @@
-// Bản đồ và vật lý di chuyển dùng chung: server dùng để mô phỏng (nguồn sự thật),
+// Bản đồ từng khu và vật lý di chuyển dùng chung: server dùng để mô phỏng (nguồn sự thật),
 // client dùng để vẽ cảnh khớp với va chạm.
+import type { AreaId } from './constants';
 
 /** Kích thước logic của cảnh (px). Client co giãn theo màn hình. */
 export const WORLD = { width: 1200, height: 760 } as const;
 
-/** Vùng sân đi lại được (toạ độ là vị trí chân nhân vật). */
-export const WALK_BOUNDS = { minX: 40, maxX: 1160, minY: 400, maxY: 740 } as const;
+export interface Vec {
+  x: number;
+  y: number;
+}
+
+export interface Rect {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
 
 export interface CircleObstacle {
   id: string;
@@ -14,21 +24,69 @@ export interface CircleObstacle {
   r: number;
 }
 
-export const OBSTACLES: readonly CircleObstacle[] = [
-  { id: 'lu-huong', x: 600, y: 470, r: 72 },
-  { id: 'cay-trai', x: 125, y: 560, r: 34 },
-  { id: 'cay-phai', x: 1075, y: 540, r: 34 },
-];
+export interface AreaMap {
+  /** Vùng đi lại được (toạ độ là vị trí chân nhân vật). */
+  walk: Rect;
+  obstacles: readonly CircleObstacle[];
+  /** Vùng xuất hiện ngẫu nhiên khi vào khu (không từ khu khác sang). */
+  spawn: Rect;
+  /** Bước vào vùng này thì sang khu khác. */
+  exits: readonly { to: AreaId; zone: Rect }[];
+  /** Điểm đứng khi từ khu `from` đi sang. */
+  entrances: Partial<Record<AreaId, Vec>>;
+  /**
+   * Khu ngồi cố định (Chính điện): mỗi người được xếp một chỗ theo thứ tự trong danh sách
+   * (gần tượng Phật trước), ngồi trên thảm và không di chuyển. Số chỗ cũng là sức chứa của room.
+   */
+  seats?: readonly Vec[];
+}
+
+/** Sân chùa: trước Chính điện, có lư hương và hai cây bồ đề. Bước lên hiên điện để vào trong. */
+const SAN_CHUA: AreaMap = {
+  walk: { minX: 40, maxX: 1160, minY: 400, maxY: 740 },
+  obstacles: [
+    { id: 'lu-huong', x: 600, y: 470, r: 72 },
+    { id: 'cay-trai', x: 125, y: 560, r: 34 },
+    { id: 'cay-phai', x: 1075, y: 540, r: 34 },
+  ],
+  spawn: { minX: 420, maxX: 780, minY: 620, maxY: 710 },
+  exits: [{ to: 'chinh-dien', zone: { minX: 380, maxX: 820, minY: 400, maxY: 412 } }],
+  entrances: { 'chinh-dien': { x: 470, y: 440 } },
+};
+
+/** Hàng ghế (y) từ gần bàn thờ ra xa, và các cột thảm hai bên lối đi giữa. */
+const HALL_ROWS = [478, 538, 598, 658, 718];
+const HALL_COLUMNS = [440, 760, 350, 850, 260, 940, 170, 1030]; // sát lối giữa trước
+
+/** Chỗ ngồi trong Chính điện: hàng gần tượng Phật trước, trong hàng thì sát lối giữa trước. */
+export const HALL_SEATS: readonly Vec[] = HALL_ROWS.flatMap((y) =>
+  HALL_COLUMNS.map((x) => ({ x, y })),
+);
+
+/** Bên trong Chính điện: bàn thờ, tượng Phật ở trên; mọi người ngồi thảm theo chỗ được xếp. */
+const CHINH_DIEN: AreaMap = {
+  walk: { minX: 70, maxX: 1130, minY: 450, maxY: 740 },
+  obstacles: [
+    { id: 'cot-trai', x: 85, y: 560, r: 24 },
+    { id: 'cot-phai', x: 1115, y: 560, r: 24 },
+  ],
+  spawn: { minX: 450, maxX: 750, minY: 600, maxY: 700 },
+  exits: [],
+  entrances: {},
+  seats: HALL_SEATS,
+};
+
+export const AREA_MAPS: Partial<Record<AreaId, AreaMap>> = {
+  'san-chua': SAN_CHUA,
+  'chinh-dien': CHINH_DIEN,
+};
+
+export const mapFor = (areaId: AreaId | string): AreaMap => AREA_MAPS[areaId as AreaId] ?? SAN_CHUA;
 
 /** Tốc độ đi bộ (px/giây). */
 export const PLAYER_SPEED = 170;
 /** Bán kính "thân" nhân vật khi va chạm. */
 export const PLAYER_RADIUS = 14;
-
-export interface Vec {
-  x: number;
-  y: number;
-}
 
 /** Ý định di chuyển: đi tới điểm đã click, hoặc giữ phím theo hướng (dir), hoặc đứng yên. */
 export type MoveIntent =
@@ -38,17 +96,20 @@ export type MoveIntent =
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-export function clampToBounds(p: Vec): Vec {
+export const inRect = (p: Vec, r: Rect) =>
+  p.x >= r.minX && p.x <= r.maxX && p.y >= r.minY && p.y <= r.maxY;
+
+export function clampToBounds(p: Vec, map: AreaMap): Vec {
   return {
-    x: clamp(p.x, WALK_BOUNDS.minX, WALK_BOUNDS.maxX),
-    y: clamp(p.y, WALK_BOUNDS.minY, WALK_BOUNDS.maxY),
+    x: clamp(p.x, map.walk.minX, map.walk.maxX),
+    y: clamp(p.y, map.walk.minY, map.walk.maxY),
   };
 }
 
-/** Đẩy điểm ra khỏi các vật cản và giữ trong sân. */
-export function resolveCollisions(p: Vec): Vec {
-  let { x, y } = clampToBounds(p);
-  for (const o of OBSTACLES) {
+/** Đẩy điểm ra khỏi các vật cản và giữ trong vùng đi lại. */
+export function resolveCollisions(p: Vec, map: AreaMap): Vec {
+  let { x, y } = clampToBounds(p, map);
+  for (const o of map.obstacles) {
     const dx = x - o.x;
     const dy = y - o.y;
     const min = o.r + PLAYER_RADIUS;
@@ -61,7 +122,7 @@ export function resolveCollisions(p: Vec): Vec {
       y = o.y + ny * min;
     }
   }
-  return clampToBounds({ x, y });
+  return clampToBounds({ x, y }, map);
 }
 
 export interface StepResult {
@@ -72,7 +133,12 @@ export interface StepResult {
 }
 
 /** Mô phỏng một bước di chuyển trong `dtSec` giây. */
-export function stepMovement(pos: Vec, intent: MoveIntent, dtSec: number): StepResult {
+export function stepMovement(
+  pos: Vec,
+  intent: MoveIntent,
+  dtSec: number,
+  map: AreaMap,
+): StepResult {
   const maxDist = PLAYER_SPEED * dtSec;
 
   if (intent.kind === 'target') {
@@ -80,13 +146,13 @@ export function stepMovement(pos: Vec, intent: MoveIntent, dtSec: number): StepR
     const dy = intent.y - pos.y;
     const dist = Math.hypot(dx, dy);
     if (dist <= maxDist) {
-      const next = resolveCollisions({ x: intent.x, y: intent.y });
+      const next = resolveCollisions({ x: intent.x, y: intent.y }, map);
       return { pos: next, intent: { kind: 'idle' }, moving: dist > 0.01 };
     }
-    const next = resolveCollisions({
-      x: pos.x + (dx / dist) * maxDist,
-      y: pos.y + (dy / dist) * maxDist,
-    });
+    const next = resolveCollisions(
+      { x: pos.x + (dx / dist) * maxDist, y: pos.y + (dy / dist) * maxDist },
+      map,
+    );
     // Bị vật cản chặn hẳn (gần như không nhích) → dừng, tránh "cọ" mãi vào vật cản.
     if (Math.hypot(next.x - pos.x, next.y - pos.y) < maxDist * 0.05) {
       return { pos: next, intent: { kind: 'idle' }, moving: false };
@@ -97,17 +163,46 @@ export function stepMovement(pos: Vec, intent: MoveIntent, dtSec: number): StepR
   if (intent.kind === 'dir') {
     const len = Math.hypot(intent.x, intent.y);
     if (len === 0) return { pos, intent: { kind: 'idle' }, moving: false };
-    const next = resolveCollisions({
-      x: pos.x + (intent.x / len) * maxDist,
-      y: pos.y + (intent.y / len) * maxDist,
-    });
+    const next = resolveCollisions(
+      { x: pos.x + (intent.x / len) * maxDist, y: pos.y + (intent.y / len) * maxDist },
+      map,
+    );
     return { pos: next, intent, moving: next.x !== pos.x || next.y !== pos.y };
   }
 
   return { pos, intent, moving: false };
 }
 
-/** Điểm xuất hiện ngẫu nhiên ở nửa dưới sân, không trùng vật cản. */
-export function randomSpawn(random: () => number = Math.random): Vec {
-  return resolveCollisions({ x: 420 + random() * 360, y: 620 + random() * 90 });
+/** Điểm xuất hiện ngẫu nhiên trong vùng spawn, không trùng vật cản. */
+export function randomSpawn(map: AreaMap, random: () => number = Math.random): Vec {
+  const s = map.spawn;
+  return resolveCollisions(
+    { x: s.minX + random() * (s.maxX - s.minX), y: s.minY + random() * (s.maxY - s.minY) },
+    map,
+  );
 }
+
+// ---------- Hành động theo khu ----------
+
+export type ActionKind = 'incense' | 'bow' | 'donate' | 'prayer' | 'bell';
+
+/** Hành động được phép ở từng khu: ngoài sân chỉ thắp hương; lạy, cầu nguyện, công đức trong điện. */
+export const AREA_ACTIONS: Record<AreaId, readonly ActionKind[]> = {
+  'cong-tam-quan': [],
+  'san-chua': ['incense'],
+  'chinh-dien': ['bow', 'donate', 'prayer'],
+  'ho-sen': [],
+  'gac-chuong': ['bell'],
+};
+
+/** Gợi ý khi làm hành động ở sai khu. */
+export const ACTION_PLACE_HINT: Record<ActionKind, string> = {
+  incense: 'Thắp hương ở lư hương ngoài Sân chùa',
+  bow: 'Hãy vào Chính điện để lạy Phật',
+  donate: 'Hòm công đức đặt trong Chính điện',
+  prayer: 'Hãy vào Chính điện để cầu nguyện',
+  bell: 'Chỉ có thể thỉnh chuông ở Gác chuông',
+};
+
+export const canDo = (areaId: string, action: ActionKind) =>
+  (AREA_ACTIONS[areaId as AreaId] ?? []).includes(action);

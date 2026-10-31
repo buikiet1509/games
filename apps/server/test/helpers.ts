@@ -24,7 +24,7 @@ export async function createTestContext() {
     http: () => request(app.server),
     async reset() {
       await prisma.$executeRawUnsafe(
-        'TRUNCATE "User", "RefreshToken", "PasswordResetToken" CASCADE',
+        'TRUNCATE "User", "RefreshToken", "PasswordResetToken", "Donation", "Prayer", "Report" CASCADE',
       );
       await redis.flushdb();
       mailer.sent = [];
