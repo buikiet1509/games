@@ -1,11 +1,13 @@
 :root {
   --paper: #f4ebd9;
   --card: #fffbf2;
+  --cream-deep: #f1e4c8;
   --border: #e3d3b3;
   --border-input: #d6c3a0;
   --red: #8b1e1e;
   --red-700: #7a1717;
   --red-900: #5e1212;
+  --red-tint: #f7e4dd;
   --gold: #c9932e;
   --gold-light: #e7c27a;
   --gold-text: #6b4a10;
@@ -13,10 +15,12 @@
   --ink-2: #4a3527;
   --ink-3: #6b5240;
   --jade: #2f6b5a;
+  --jade-tint: #e3efe9;
   --radius-control: 12px;
   --radius-card: 20px;
   --font-heading: 'Noto Serif', Georgia, serif;
   --font-body: 'Be Vietnam Pro', system-ui, sans-serif;
+  --focus-ring: 0 0 0 3px rgba(201, 147, 46, 0.45);
 }
 
 * {
@@ -27,13 +31,16 @@ html,
 body,
 #app {
   margin: 0;
-  height: 100%;
+  min-height: 100%;
 }
 
 body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 h1,
@@ -41,4 +48,476 @@ h2,
 h3 {
   font-family: var(--font-heading);
   font-weight: 700;
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.splash {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  color: var(--ink-3);
+}
+
+/* ---------- Bố cục đăng nhập ---------- */
+
+.auth-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 53fr) minmax(0, 47fr);
+  min-height: 100vh;
+}
+
+.auth-hero {
+  background: var(--red-700);
+  color: var(--paper);
+  padding: 56px 62px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-logo {
+  color: var(--gold-light);
+}
+
+.brand-name {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 26px;
+  color: #f6e3bd;
+}
+
+.tamquan {
+  width: 100%;
+  max-width: 620px;
+  height: auto;
+  margin-top: auto;
+}
+
+.hero-copy h1 {
+  font-size: clamp(32px, 3.4vw, 46px);
+  line-height: 1.2;
+  color: #fbeed2;
+  max-width: 14em;
+}
+
+.hero-copy p {
+  margin: 16px 0 0;
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--gold-light);
+  max-width: 34em;
+}
+
+.auth-main {
+  display: grid;
+  place-items: center;
+  padding: 48px 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 424px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 38px 38px 30px;
+  box-shadow:
+    0 1px 2px rgba(94, 18, 18, 0.04),
+    0 24px 60px -24px rgba(94, 18, 18, 0.22);
+}
+
+/* ---------- Tabs ---------- */
+
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--cream-deep);
+  border-radius: var(--radius-control);
+  padding: 4px;
+  margin-bottom: 26px;
+}
+
+.tab {
+  min-height: 44px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-3);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.tab[aria-selected='true'] {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(43, 27, 18, 0.1);
+}
+
+/* ---------- Form ---------- */
+
+.card-title {
+  font-size: 27px;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+.card-subtitle {
+  margin: 6px 0 22px;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.field {
+  margin-bottom: 18px;
+}
+
+.field-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.field label,
+.robe-picker legend {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  background: #fff;
+  border: 1px solid var(--border-input);
+  border-radius: 10px;
+  transition: border-color 0.15s;
+}
+
+.input::placeholder {
+  color: #8c7560;
+}
+
+.input:hover {
+  border-color: #c4ac82;
+}
+
+.input:focus-visible {
+  border-color: var(--gold);
+}
+
+.input[aria-invalid='true'] {
+  border-color: var(--red);
+}
+
+.input-with-action {
+  position: relative;
+}
+
+.input-with-action .input {
+  padding-right: 52px;
+}
+
+.input-action {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.input-action:hover {
+  color: var(--ink);
+}
+
+.field-error {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--red);
+  font-weight: 500;
+}
+
+.form-alert {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--red-tint);
+  color: var(--red-900);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.form-success {
+  margin: 12px 0 22px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--jade-tint);
+  color: var(--jade);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.link-button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin: -12px 0 6px;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin: -4px 0 12px;
+  font-size: 14px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.checkbox input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--red);
+}
+
+/* ---------- Chọn màu áo ---------- */
+
+.robe-picker {
+  border: 0;
+  margin: 0 0 22px;
+  padding: 0;
+}
+
+.robe-picker legend {
+  padding: 0;
+  margin-bottom: 10px;
+}
+
+.robe-options {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.robe-option {
+  position: relative;
+  cursor: pointer;
+}
+
+.robe-option input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.robe-swatch {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: transparent;
+  border: 3px solid var(--card);
+  box-shadow: 0 0 0 1px var(--border-input);
+  transition: box-shadow 0.15s;
+}
+
+.robe-option input:checked + .robe-swatch {
+  color: #fff;
+  box-shadow: 0 0 0 2px var(--gold);
+}
+
+.robe-option input:focus-visible + .robe-swatch {
+  box-shadow:
+    0 0 0 2px var(--gold),
+    var(--focus-ring);
+}
+
+/* ---------- Nút ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 0 20px;
+  border-radius: var(--radius-control);
+  border: 1px solid transparent;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.btn-primary {
+  background: var(--red);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--red-700);
+}
+
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.btn-secondary {
+  background: #fff;
+  border-color: var(--border-input);
+  color: var(--ink);
+}
+
+.btn-secondary:hover {
+  border-color: #c4ac82;
+}
+
+.btn[aria-disabled='true'] {
+  cursor: not-allowed;
+  color: var(--ink-2);
+}
+
+.soon-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--cream-deep);
+  color: var(--gold-text);
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 20px 0;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ---------- Màn tạm sau đăng nhập ---------- */
+
+.lobby {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.lobby-card {
+  text-align: center;
+}
+
+.lobby-logo {
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 960px) {
+  .auth-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-hero {
+    padding: 24px 20px 28px;
+    gap: 16px;
+  }
+
+  .tamquan {
+    display: none;
+  }
+
+  .brand-name {
+    font-size: 20px;
+  }
+
+  .hero-copy h1 {
+    font-size: 26px;
+  }
+
+  .hero-copy p {
+    font-size: 15px;
+    margin-top: 8px;
+  }
+
+  .auth-main {
+    padding: 24px 16px 40px;
+    place-items: start center;
+  }
+
+  .auth-card {
+    padding: 28px 22px 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
 }

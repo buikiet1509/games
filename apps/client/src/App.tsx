@@ -1,16 +1,39 @@
-import { AREAS } from '@chua/shared';
+import { useEffect, useState } from 'preact/hooks';
+import { restoreSession, session } from './auth/session';
+import { AuthScreen } from './screens/AuthScreen';
+import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
+import { LobbyPlaceholder } from './screens/LobbyPlaceholder';
 
-// Màn tạm cho mốc 1 — sẽ thay bằng màn đăng nhập (mốc 3) và cảnh Phaser (mốc 4).
+const RESET_PATH = '/dat-lai-mat-khau';
+
 export function App() {
-  return (
-    <main style={{ padding: 32 }}>
-      <h1>Chùa An Lạc Online</h1>
-      <p>Khung dự án đã sẵn sàng. Các khu vực:</p>
-      <ul>
-        {AREAS.map((a) => (
-          <li key={a.id}>{a.name}</li>
-        ))}
-      </ul>
-    </main>
+  const [resetToken, setResetToken] = useState(() =>
+    location.pathname === RESET_PATH ? new URLSearchParams(location.search).get('token') : null,
   );
+
+  useEffect(() => {
+    if (!resetToken) void restoreSession();
+  }, [resetToken]);
+
+  if (resetToken) {
+    return (
+      <ResetPasswordScreen
+        token={resetToken}
+        onDone={() => {
+          history.replaceState(null, '', '/');
+          setResetToken(null);
+        }}
+      />
+    );
+  }
+
+  const state = session.value;
+  if (state.status === 'loading') {
+    return (
+      <div class="splash" role="status">
+        Đang mở cổng chùa…
+      </div>
+    );
+  }
+  return state.status === 'signedIn' ? <LobbyPlaceholder user={state.user} /> : <AuthScreen />;
 }
