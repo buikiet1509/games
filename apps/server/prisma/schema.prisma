@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String               @id @default(uuid()) @db.Uuid
+  username       String               @unique
+  email          String               @unique
+  passwordHash   String
+  robeColor      String
+  merit          Int                  @default(100)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  refreshTokens  RefreshToken[]
+  passwordResets PasswordResetToken[]
+}
+
+/// Refresh token xoay vòng: mỗi lần refresh tạo token mới cùng familyId, token cũ bị thu hồi.
+/// Dùng lại token đã thu hồi (ngoài khoảng ân hạn) → thu hồi cả family.
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  familyId  String    @db.Uuid
+  remember  Boolean
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([familyId])
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}

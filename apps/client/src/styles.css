@@ -1,0 +1,44 @@
+:root {
+  --paper: #f4ebd9;
+  --card: #fffbf2;
+  --border: #e3d3b3;
+  --border-input: #d6c3a0;
+  --red: #8b1e1e;
+  --red-700: #7a1717;
+  --red-900: #5e1212;
+  --gold: #c9932e;
+  --gold-light: #e7c27a;
+  --gold-text: #6b4a10;
+  --ink: #2b1b12;
+  --ink-2: #4a3527;
+  --ink-3: #6b5240;
+  --jade: #2f6b5a;
+  --radius-control: 12px;
+  --radius-card: 20px;
+  --font-heading: 'Noto Serif', Georgia, serif;
+  --font-body: 'Be Vietnam Pro', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+}
