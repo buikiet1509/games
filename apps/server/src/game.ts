@@ -5,8 +5,6 @@ import { AREAS } from '@chua/shared';
 import { createTempleRoom } from './rooms/TempleRoom';
 import type { GameServices } from './services';
 
-export const OPEN_AREAS = ['san-chua', 'chinh-dien'] as const;
-
 /** Colyseus dùng chung HTTP server với Fastify: một cổng cho cả REST và WebSocket. */
 export function createGameServer(
   httpServer: HttpServer,
@@ -24,9 +22,9 @@ export function createGameServer(
     transport: new WebSocketTransport({ server: httpServer }),
   });
   const TempleRoom = createTempleRoom(services);
-  // Hiện mở Sân chùa và Chính điện; mốc 6 mở đủ 5 khu và tự chia bản sao.
+  // Mỗi khu một loại room; joinOrCreate tự mở bản sao khi các room hiện có đã đầy.
   for (const area of AREAS) {
-    if ((opts.areas ?? OPEN_AREAS).includes(area.id)) {
+    if (!opts.areas || opts.areas.includes(area.id)) {
       gameServer.define(area.id, TempleRoom, { areaId: area.id });
     }
   }

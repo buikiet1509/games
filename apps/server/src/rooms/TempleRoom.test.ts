@@ -22,6 +22,7 @@ interface PlayerView {
 }
 interface StateView {
   areaId: string;
+  zone: number;
   players: Map<string, PlayerView>;
 }
 
@@ -47,7 +48,6 @@ beforeAll(async () => {
   });
   gameServer = createGameServer(ctx.app.server, services, {
     clientOrigin: 'http://localhost:5173',
-    areas: ['san-chua', 'chinh-dien', 'gac-chuong'],
   });
   await gameServer.listen(0);
   endpoint = `ws://localhost:${(ctx.app.server.address() as AddressInfo).port}`;
@@ -249,6 +249,48 @@ describe('khu vực', () => {
     expect(playerOf(r)!.y).toBeGreaterThanOrEqual(600);
     await leave(r);
   });
+});
+
+describe('chuyển khu & bản sao', () => {
+  async function travelFrom(area: string, x: number, y: number) {
+    const r = await connect((await signUp()).token, area);
+    r.send('move_to', { x, y });
+    const msg = await nextMessage(r, 'travel', undefined, 10_000);
+    await leave(r);
+    return msg.to;
+  }
+
+  it('các lối đi nối đúng khu: cổng ↔ sân ↔ hồ sen / gác chuông', async () => {
+    expect(await travelFrom('cong-tam-quan', 600, 420)).toBe('san-chua');
+    expect(await travelFrom('san-chua', 40, 640)).toBe('ho-sen');
+    expect(await travelFrom('san-chua', 1160, 640)).toBe('gac-chuong');
+    expect(await travelFrom('san-chua', 600, 740)).toBe('cong-tam-quan');
+    expect(await travelFrom('ho-sen', 1160, 640)).toBe('san-chua');
+  }, 40_000);
+
+  it('Chính điện đủ 40 người → người thứ 41 vào "Khu 2"; API đếm đủ người online', async () => {
+    const { token } = await signUp();
+    const rooms: TestRoom[] = [];
+    for (let i = 0; i < HALL_SEATS.length; i++) rooms.push(await connect(token));
+    const first = rooms[0]!;
+    expect(new Set(rooms.map((r) => r.roomId)).size).toBe(1);
+    await until(() => first.state.zone === 1);
+
+    const extra = await connect(token);
+    expect(extra.roomId).not.toBe(first.roomId);
+    await until(() => extra.state.zone === 2);
+
+    const online = await ctx.http().get('/api/online');
+    expect(online.body.areas['chinh-dien']).toBe(HALL_SEATS.length + 1);
+    expect(online.body.total).toBeGreaterThanOrEqual(HALL_SEATS.length + 1);
+
+    // Khu 1 trống hẳn → đóng; room mới mở sau đó dùng lại số 1.
+    await leave(...rooms);
+    await sleep(300);
+    const again = await connect((await signUp()).token);
+    await until(() => again.state.zone === 1 || again.roomId === extra.roomId);
+    await leave(extra, again);
+  }, 60_000);
 });
 
 describe('phước & điểm danh', () => {

@@ -16,5 +16,7 @@ export class Player extends Schema {
 
 export class TempleState extends Schema {
   @type('string') areaId = '';
+  /** Số thứ tự bản sao của khu (1, 2, 3…) — khu đầy thì mở bản sao mới, hiển thị "Khu 2". */
+  @type('uint8') zone = 1;
   @type({ map: Player }) players = new MapSchema<Player>();
 }

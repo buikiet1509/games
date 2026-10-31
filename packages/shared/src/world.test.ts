@@ -118,6 +118,17 @@ describe('bản đồ các khu', () => {
     expect(firstRow).toEqual([...firstRow].sort((a, b) => a - b));
   });
 
+  it('mọi lối ra đều dẫn tới khu có lối vào ngược lại (đi qua rồi đi về được)', () => {
+    for (const [id, map] of Object.entries(AREA_MAPS)) {
+      for (const exit of map.exits) {
+        const dest = AREA_MAPS[exit.to];
+        // Khu có chỗ ngồi cố định (Chính điện) thì xếp chỗ thay cho lối vào.
+        const arrives = dest.seats ?? dest.entrances[id as keyof typeof dest.entrances];
+        expect(arrives, `${id} → ${exit.to}`).toBeDefined();
+      }
+    }
+  });
+
   it('ngoài sân chỉ thắp hương; lạy, cầu nguyện, công đức trong Chính điện', () => {
     expect(canDo('san-chua', 'incense')).toBe(true);
     for (const a of ['bow', 'prayer', 'donate'] as const) {

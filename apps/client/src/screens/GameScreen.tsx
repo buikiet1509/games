@@ -3,6 +3,7 @@ import {
   AREAS,
   HALL_SEATS,
   INCENSE_RANGE,
+  START_AREA,
   canDo,
   mapFor,
   type AreaId,
@@ -27,14 +28,15 @@ type Conn =
   | { status: 'reconnecting' }
   | { status: 'failed'; message: string };
 
-/** Các khu đã mở (mốc 6 mở đủ 5 khu). */
-const OPEN_AREAS: readonly AreaId[] = ['san-chua', 'chinh-dien'];
 const CENSER = mapFor('san-chua').obstacles.find((o) => o.id === 'lu-huong')!;
 /** Điểm đứng trước lư hương khi tự đi tới để thắp hương. */
 const CENSER_FRONT = { x: CENSER.x, y: CENSER.y + CENSER.r + 40 };
 const areaName = (id: string) => AREAS.find((a) => a.id === id)?.name ?? id;
 const AREA_HINT: Partial<Record<AreaId, string>> = {
+  'cong-tam-quan': 'Nhấp để di chuyển · đi qua cổng để vào Sân chùa',
   'san-chua': 'Nhấp vào sân để di chuyển · bước lên hiên để vào Chính điện',
+  'ho-sen': 'Nhấp để dạo quanh hồ · đi về bên phải để ra Sân chùa',
+  'gac-chuong': 'Nhấp để di chuyển · bấm Thỉnh chuông để cả khu cùng nghe',
 };
 
 /** Hàng ghế (1 = gần tượng Phật nhất) của chỗ ngồi tại vị trí (x, y) trong Chính điện. */
@@ -49,7 +51,9 @@ export function GameScreen({ user }: { user: PublicUser }) {
   const [attempt, setAttempt] = useState(0);
   const [count, setCount] = useState(0);
   // Khu đang ở; `from` là khu vừa rời để xuất hiện ở đúng lối vào.
-  const [place, setPlace] = useState<{ area: AreaId; from?: AreaId }>({ area: 'san-chua' });
+  const [place, setPlace] = useState<{ area: AreaId; from?: AreaId }>({ area: START_AREA });
+  const [zone, setZone] = useState(1);
+  const online = useOnlineTotal();
   const area = place.area;
   const [dialog, setDialog] = useState<'bow' | 'donate' | null>(null);
 
@@ -64,7 +68,10 @@ export function GameScreen({ user }: { user: PublicUser }) {
       unbind();
       unbind = bindRoomToStore(r);
       setConn({ status: 'connected', room: r });
-      const sync = () => setCount(r.state.players?.size ?? 0);
+      const sync = () => {
+        setCount(r.state.players?.size ?? 0);
+        setZone(r.state.zone ?? 1);
+      };
       r.onStateChange(sync);
       // Bước vào lối đi → server báo sang khu khác.
       r.onMessage('travel', ({ to }: { to: AreaId }) => {
@@ -126,7 +133,7 @@ export function GameScreen({ user }: { user: PublicUser }) {
     <div class="game-layout">
       <TopBar
         user={user}
-        online={count}
+        online={online ?? count}
         area={area}
         onSelectArea={(a) => a !== area && setPlace({ area: a })}
       />
@@ -135,7 +142,11 @@ export function GameScreen({ user }: { user: PublicUser }) {
           {room && <GameCanvas key={room.roomId + room.sessionId} room={room} area={area} />}
           <div class="stage-overlay">
             <div class="hud-chip">
-              <strong>{areaName(area)}</strong> · {count} người tại đây
+              <strong>
+                {areaName(area)}
+                {zone > 1 && ` · Khu ${zone}`}
+              </strong>{' '}
+              · {count} người tại đây
             </div>
             {area === 'chinh-dien' ? (
               <>
@@ -208,6 +219,26 @@ export function GameScreen({ user }: { user: PublicUser }) {
       )}
     </div>
   );
+}
+
+/** Tổng số người đang ở chùa (mọi khu, mọi bản sao), lấy định kỳ từ server. */
+function useOnlineTotal() {
+  const [total, setTotal] = useState<number | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      fetch('/api/online')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d: { total: number } | null) => alive && d && setTotal(d.total))
+        .catch(() => {});
+    void load();
+    const t = setInterval(load, 15_000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
+  return total;
 }
 
 /** "Bạn ngồi hàng N" — chỗ ngồi do server xếp, gần tượng Phật trước. */
@@ -295,16 +326,13 @@ function TopBar({
       <nav class="area-tabs" aria-label="Khu vực">
         {AREAS.map((a) => {
           const current = a.id === area;
-          const open = OPEN_AREAS.includes(a.id);
           return (
             <button
               key={a.id}
               type="button"
               class="area-tab"
               aria-current={current ? 'page' : undefined}
-              aria-disabled={open ? undefined : 'true'}
-              title={open ? undefined : 'Sắp mở'}
-              onClick={() => open && onSelectArea(a.id)}
+              onClick={() => onSelectArea(a.id)}
             >
               {a.name}
             </button>

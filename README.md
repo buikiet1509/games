@@ -42,7 +42,8 @@ Client (build time): `VITE_GAME_URL` — địa chỉ WebSocket game server ở 
 
 ## Multiplayer
 
-- Mỗi khu vực là một room Colyseus, tối đa 150 người. Đã mở: **Sân chùa** (`san-chua`, có lư hương) và **Chính điện** (`chinh-dien`, bên trong điện có tượng Phật). Bước lên hiên điện để vào trong; server báo `travel` và client chuyển room, xuất hiện ở đúng lối vào.
+- 5 khu, mỗi khu một loại room Colyseus (tối đa 150 người; Chính điện 40 chỗ ngồi). Sơ đồ: **Cổng Tam Quan** (nơi bắt đầu) → **Sân chùa** (lư hương) → hiên điện vào **Chính điện**; từ sân rẽ trái sang **Hồ sen**, rẽ phải sang **Gác chuông**. Bản đồ, lối đi, lối vào ở `AREA_MAPS` (`packages/shared/src/world.ts`). Bước vào lối đi hoặc bấm tab để chuyển khu; server báo `travel` và client chuyển room, xuất hiện ở đúng lối vào.
+- Khu đầy thì `joinOrCreate` tự mở bản sao; mỗi bản sao nhận số nhỏ nhất chưa dùng và hiển thị "Chính điện · Khu 2". `GET /api/online` trả tổng số người và theo từng khu.
 - Hành động theo khu (`AREA_ACTIONS` trong `packages/shared/src/world.ts`): Sân chùa chỉ thắp hương; lạy Phật, cầu nguyện, công đức trong Chính điện; thỉnh chuông ở Gác chuông. Server từ chối và nhắc nơi cần tới.
 - Trong Chính điện mọi người **ngồi cố định trên thảm, không di chuyển**: server xếp chỗ trống gần tượng Phật nhất (5 hàng × 8 chỗ hai bên lối giữa, `HALL_SEATS`), rời đi thì nhường chỗ. Sức chứa mỗi điện = 40 chỗ; đầy thì matchmaking tự mở điện mới. Rời điện bằng nút "Ra Sân chùa".
 - Khi lạy, nhân vật trải thảm, quỳ quay lưng về phía người xem (hướng vào bàn thờ) và cúi rạp đúng lúc người đó nhấn giữ.

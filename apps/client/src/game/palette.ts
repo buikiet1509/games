@@ -34,6 +34,12 @@ export const C = {
   woodFloor: 0xd8b47c,
   woodLine: 0xc49a5e,
   stone: 0xd8c4a0,
+  stoneDark: 0xb9a37f,
+  grass: 0xcfd6a4,
+  grassLight: 0xdfe3b8,
+  water: 0x9cc3b9,
+  waterLight: 0xbcd8cf,
+  pad: 0x5f8f6a,
 } as const;
 
 export const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;

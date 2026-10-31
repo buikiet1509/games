@@ -19,6 +19,8 @@ export interface RemotePlayer {
 
 export interface TempleStateView {
   areaId: string;
+  /** Số bản sao của khu (Khu 1, 2…). */
+  zone: number;
   players: {
     size: number;
     get(id: string): RemotePlayer | undefined;

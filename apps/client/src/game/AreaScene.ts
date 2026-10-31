@@ -80,8 +80,8 @@ export abstract class AreaScene extends Phaser.Scene {
     );
   }
 
-  /** Hiệu ứng trong cảnh cho hoạt động mọi người cùng thấy. */
-  private playActivity(item: ActivityItem) {
+  /** Hiệu ứng trong cảnh cho hoạt động mọi người cùng thấy (lớp con thêm hiệu ứng riêng). */
+  protected playActivity(item: ActivityItem) {
     const sprite = item.sessionId ? this.sprites.get(item.sessionId) : undefined;
     switch (item.kind) {
       case 'incense':

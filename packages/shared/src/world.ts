@@ -41,7 +41,29 @@ export interface AreaMap {
   seats?: readonly Vec[];
 }
 
-/** Sân chùa: trước Chính điện, có lư hương và hai cây bồ đề. Bước lên hiên điện để vào trong. */
+// Sơ đồ chùa:            Chính điện
+//                            ↑ (hiên điện)
+//          Hồ sen  ←    Sân chùa    →  Gác chuông
+//                            ↓
+//                      Cổng Tam Quan  (nơi bắt đầu)
+
+/** Lối đi ở mép trái/phải/dưới cảnh (dải mỏng sát mép vùng đi lại). */
+const LEFT_EDGE: Rect = { minX: 40, maxX: 52, minY: 560, maxY: 700 };
+const RIGHT_EDGE: Rect = { minX: 1148, maxX: 1160, minY: 560, maxY: 700 };
+
+/** Cổng Tam Quan: cổng lớn phía trên, lối đá dẫn vào. Đi qua cổng để vào Sân chùa. */
+const CONG_TAM_QUAN: AreaMap = {
+  walk: { minX: 40, maxX: 1160, minY: 420, maxY: 740 },
+  obstacles: [
+    { id: 'den-da-trai', x: 380, y: 480, r: 24 },
+    { id: 'den-da-phai', x: 820, y: 480, r: 24 },
+  ],
+  spawn: { minX: 450, maxX: 750, minY: 640, maxY: 710 },
+  exits: [{ to: 'san-chua', zone: { minX: 500, maxX: 700, minY: 420, maxY: 432 } }],
+  entrances: { 'san-chua': { x: 600, y: 480 } },
+};
+
+/** Sân chùa: trước Chính điện, có lư hương và hai cây bồ đề. Ngã tư nối các khu. */
 const SAN_CHUA: AreaMap = {
   walk: { minX: 40, maxX: 1160, minY: 400, maxY: 740 },
   obstacles: [
@@ -50,8 +72,44 @@ const SAN_CHUA: AreaMap = {
     { id: 'cay-phai', x: 1075, y: 540, r: 34 },
   ],
   spawn: { minX: 420, maxX: 780, minY: 620, maxY: 710 },
-  exits: [{ to: 'chinh-dien', zone: { minX: 380, maxX: 820, minY: 400, maxY: 412 } }],
-  entrances: { 'chinh-dien': { x: 470, y: 440 } },
+  exits: [
+    { to: 'chinh-dien', zone: { minX: 380, maxX: 820, minY: 400, maxY: 412 } },
+    { to: 'cong-tam-quan', zone: { minX: 480, maxX: 720, minY: 728, maxY: 740 } },
+    { to: 'ho-sen', zone: LEFT_EDGE },
+    { to: 'gac-chuong', zone: RIGHT_EDGE },
+  ],
+  entrances: {
+    'chinh-dien': { x: 470, y: 440 },
+    'cong-tam-quan': { x: 600, y: 700 },
+    'ho-sen': { x: 90, y: 640 },
+    'gac-chuong': { x: 1110, y: 640 },
+  },
+};
+
+/** Hồ sen: hồ nước giữa cảnh (xấp xỉ bằng các vòng tròn), lối đi quanh hồ. */
+const HO_SEN: AreaMap = {
+  walk: { minX: 40, maxX: 1160, minY: 380, maxY: 740 },
+  obstacles: [
+    { id: 'ho-1', x: 380, y: 565, r: 95 },
+    { id: 'ho-2', x: 520, y: 560, r: 110 },
+    { id: 'ho-3', x: 680, y: 560, r: 110 },
+    { id: 'ho-4', x: 820, y: 565, r: 95 },
+  ],
+  spawn: { minX: 960, maxX: 1100, minY: 600, maxY: 720 },
+  exits: [{ to: 'san-chua', zone: RIGHT_EDGE }],
+  entrances: { 'san-chua': { x: 1110, y: 640 } },
+};
+
+/** Gác chuông: lầu chuông với quả chuông đồng lớn. Thỉnh chuông ở đây. */
+const GAC_CHUONG: AreaMap = {
+  walk: { minX: 40, maxX: 1160, minY: 440, maxY: 740 },
+  obstacles: [
+    { id: 'cot-lau-trai', x: 455, y: 450, r: 18 },
+    { id: 'cot-lau-phai', x: 745, y: 450, r: 18 },
+  ],
+  spawn: { minX: 120, maxX: 420, minY: 600, maxY: 720 },
+  exits: [{ to: 'san-chua', zone: LEFT_EDGE }],
+  entrances: { 'san-chua': { x: 90, y: 640 } },
 };
 
 /** Hàng ghế (y) từ gần bàn thờ ra xa, và các cột thảm hai bên lối đi giữa. */
@@ -76,10 +134,16 @@ const CHINH_DIEN: AreaMap = {
   seats: HALL_SEATS,
 };
 
-export const AREA_MAPS: Partial<Record<AreaId, AreaMap>> = {
+export const AREA_MAPS: Record<AreaId, AreaMap> = {
+  'cong-tam-quan': CONG_TAM_QUAN,
   'san-chua': SAN_CHUA,
   'chinh-dien': CHINH_DIEN,
+  'ho-sen': HO_SEN,
+  'gac-chuong': GAC_CHUONG,
 };
+
+/** Khu xuất hiện khi mới vào chùa. */
+export const START_AREA: AreaId = 'cong-tam-quan';
 
 export const mapFor = (areaId: AreaId | string): AreaMap => AREA_MAPS[areaId as AreaId] ?? SAN_CHUA;
 

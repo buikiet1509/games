@@ -11,6 +11,8 @@ import { createRefreshTokens } from './auth/refreshTokens';
 import { createMailer, type Mailer } from './auth/mailer';
 import { authRoutes } from './auth/routes';
 import { createLeaderboard } from './services/leaderboard';
+import { matchMaker } from '@colyseus/core';
+import { AREAS } from '@chua/shared';
 import { z } from 'zod';
 
 export interface AppDeps {
@@ -51,6 +53,18 @@ export async function buildApp(config: Config, deps: AppDeps) {
   const accessTokens = createAccessTokens(config.JWT_ACCESS_SECRET);
 
   app.get('/health', async () => ({ status: 'ok', uptime: process.uptime() }));
+
+  // Số người online toàn chùa và từng khu (cộng mọi room/bản sao; nhiều instance thì qua Redis driver).
+  let onlineCache: { at: number; body: unknown } | undefined;
+  app.get('/api/online', async () => {
+    if (onlineCache && Date.now() - onlineCache.at < 3000) return onlineCache.body;
+    const rooms = await matchMaker.query({});
+    const areas = Object.fromEntries(AREAS.map((a) => [a.id, 0])) as Record<string, number>;
+    for (const r of rooms) if (r.name in areas) areas[r.name]! += r.clients;
+    const body = { total: Object.values(areas).reduce((a, b) => a + b, 0), areas };
+    onlineCache = { at: Date.now(), body };
+    return body;
+  });
 
   const leaderboard = createLeaderboard(deps.redis);
   const leaderboardQuery = z.object({

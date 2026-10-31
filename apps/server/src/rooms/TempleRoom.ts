@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
-import { Room, ServerError, type Client } from '@colyseus/core';
+import { matchMaker, Room, ServerError, type Client } from '@colyseus/core';
 import { Prisma } from '@prisma/client';
 import {
   clientMessageSchemas,
@@ -95,12 +95,13 @@ export function createTempleRoom(svc: GameServices) {
       return { userId: user.id, username: user.username, robeColor: user.robeColor };
     }
 
-    onCreate(options: { areaId?: AreaId }) {
+    async onCreate(options: { areaId?: AreaId }) {
       this.setState(new TempleState());
       this.state.areaId = options.areaId ?? 'san-chua';
       this.map = mapFor(this.state.areaId);
       // Khu ngồi cố định: sức chứa đúng bằng số chỗ; đầy thì matchmaking tự mở room mới.
       if (this.map.seats) this.maxClients = this.map.seats.length;
+      await this.assignZone();
       this.setPatchRate(TICK_MS);
       this.setSimulationInterval((dt) => this.tick(dt), TICK_MS);
       void this.presence.subscribe(LEADERBOARD_CHANNEL, this.onLeaderboardChanged);
@@ -197,6 +198,18 @@ export function createTempleRoom(svc: GameServices) {
       if (sim?.seat != null) this.takenSeats.delete(sim.seat);
       this.state.players.delete(client.sessionId);
       this.sims.delete(client.sessionId);
+    }
+
+    /** Lấy số bản sao nhỏ nhất chưa dùng trong các room cùng khu (Khu 1 đóng thì số 1 được dùng lại). */
+    private async assignZone() {
+      const rooms = await matchMaker.query({ name: this.roomName });
+      const used = new Set(
+        rooms.filter((r) => r.roomId !== this.roomId).map((r) => r.metadata?.zone as number),
+      );
+      let zone = 1;
+      while (used.has(zone)) zone++;
+      this.state.zone = zone;
+      await this.setMetadata({ zone });
     }
 
     /** Xếp chỗ trống gần tượng Phật nhất (danh sách seats đã sắp theo thứ tự ưu tiên). */
