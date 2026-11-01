@@ -519,6 +519,7 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
+    animation: none !important;
   }
 }
 
@@ -553,6 +554,7 @@ textarea {
 }
 
 .area-tabs {
+  min-width: 0; /* cho phép co lại và cuộn ngang trên màn hình hẹp */
   display: flex;
   gap: 4px;
   padding: 4px;
@@ -586,6 +588,7 @@ textarea {
 }
 
 .topbar-right {
+  flex: none;
   margin-left: auto;
   display: flex;
   align-items: center;
@@ -754,8 +757,34 @@ textarea {
   margin: 0;
 }
 
+/* Laptop 1280px: thanh trên phải đủ chỗ cho cả 5 tab khu vực. */
+@media (max-width: 1440px) {
+  .area-tab {
+    padding: 0 12px;
+  }
+
+  .online-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .topbar,
+  .topbar-right {
+    gap: 14px;
+  }
+}
+
 @media (max-width: 1100px) {
   .online {
+    display: none;
+  }
+}
+
+@media (max-width: 1000px) {
+  .topbar-brand span {
     display: none;
   }
 }
@@ -773,6 +802,20 @@ textarea {
 
   .merit-pill {
     padding: 0 12px;
+  }
+
+  .topbar-right {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar-brand {
+    display: none;
+  }
+
+  .merit-pill {
+    font-size: 13px;
   }
 }
 
@@ -816,11 +859,80 @@ textarea {
 
 /* ---------- Thanh hành động ---------- */
 
-.action-bar {
+.action-dock {
   position: absolute;
   left: 50%;
   bottom: 20px;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 4;
+}
+
+/* Tab ẩn/hiện gắn ở mép trên thanh; khi ẩn thì thành nút gọn ở đáy cảnh. */
+.action-dock-toggle {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 14px;
+  margin-bottom: -1px;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: rgba(255, 251, 242, 0.96);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+
+.action-dock-toggle:hover {
+  color: var(--ink);
+}
+
+.action-dock-chevron {
+  transform: rotate(180deg);
+  transition: transform 0.2s;
+}
+
+.is-collapsed .action-dock-chevron {
+  transform: none;
+}
+
+.is-collapsed .action-dock-toggle {
+  min-height: 44px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: 0 12px 30px -14px rgba(43, 27, 18, 0.35);
+}
+
+.action-dock-cd {
+  color: var(--gold-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.action-dock .action-bar {
+  transition:
+    transform 0.25s ease-out,
+    opacity 0.2s ease-out;
+}
+
+/* Ẩn: thanh trượt xuống khỏi khung; tách khỏi bố cục để nút gọn nằm sát đáy. */
+.is-collapsed .action-bar {
+  position: absolute;
+  top: 100%;
+  opacity: 0;
+  transform: translateY(24px);
+  pointer-events: none;
+}
+
+.action-bar {
   display: flex;
   gap: 8px;
   padding: 8px;
@@ -1114,6 +1226,114 @@ textarea {
   cursor: default;
 }
 
+/* ---------- Ngăn kéo (điện thoại) ---------- */
+
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.drawer-handle {
+  display: none;
+  position: relative;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 14px 20px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.drawer-grip {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 40px;
+  height: 4px;
+  margin-left: -20px;
+  border-radius: 999px;
+  background: var(--border-input);
+}
+
+.drawer-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+}
+
+.drawer-latest {
+  color: var(--ink-3);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawer-chevron {
+  flex: none;
+  color: var(--ink-2);
+  transition: transform 0.2s;
+}
+
+/* ---------- Âm thanh, phước ---------- */
+
+.audio-hint {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 251, 242, 0.96);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px -12px rgba(43, 27, 18, 0.35);
+}
+
+.sound-toggle {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.22);
+  color: #f3dfbc;
+  cursor: pointer;
+}
+
+.sound-toggle:hover {
+  color: #fff;
+}
+
+.merit-value {
+  display: inline-block;
+  animation: merit-bump 0.45s ease-out;
+}
+
+@keyframes merit-bump {
+  30% {
+    transform: scale(1.25);
+    color: var(--gold-light);
+  }
+}
+
 /* ---------- Hộp thoại ---------- */
 
 .modal-backdrop {
@@ -1303,13 +1523,54 @@ select.input {
 }
 
 @media (max-width: 900px) {
-  /* Mốc 7 sẽ biến cột phải thành ngăn kéo trượt lên trên điện thoại. */
   .game-body {
     grid-template-columns: 1fr;
   }
 
+  /* Cột phải thành ngăn kéo trượt lên từ đáy; khi đóng chỉ lộ thanh kéo. */
   .sidebar {
-    display: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 25;
+    height: min(78dvh, 640px);
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -16px 40px -20px rgba(43, 27, 18, 0.35);
+    transform: translateY(calc(100% - 60px));
+    transition: transform 0.25s ease-out;
+  }
+
+  .sidebar.drawer-open {
+    transform: translateY(0);
+  }
+
+  .drawer-handle {
+    display: flex;
+  }
+
+  .drawer-open .drawer-chevron {
+    transform: rotate(180deg);
+  }
+
+  .action-dock {
+    bottom: 72px; /* nằm trên thanh ngăn kéo */
+  }
+
+  .toasts {
+    top: 12px;
+    width: calc(100% - 32px);
+  }
+
+  .toast {
+    max-width: 100%;
+  }
+
+  .sound-toggle {
+    width: 40px;
+    height: 40px;
   }
 
   .action {
@@ -1321,6 +1582,5 @@ select.input {
   .action-bar {
     gap: 4px;
     padding: 6px;
-    bottom: 12px;
   }
 }

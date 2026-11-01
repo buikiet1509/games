@@ -24,14 +24,24 @@ export interface CircleObstacle {
   r: number;
 }
 
+export interface AreaExit {
+  to: AreaId;
+  /** Vùng "ở gần" lối vào: người chơi phải đứng trong đây thì mới vào được. */
+  zone: Rect;
+  /** Vùng bấm được trên cảnh (toạ độ thế giới): cửa điện, lòng cổng, biển chỉ lối. */
+  hotspot: Rect;
+  /** Điểm tự đi tới khi bấm lối vào lúc còn ở xa (nằm trong `zone`). */
+  approach: Vec;
+}
+
 export interface AreaMap {
   /** Vùng đi lại được (toạ độ là vị trí chân nhân vật). */
   walk: Rect;
   obstacles: readonly CircleObstacle[];
   /** Vùng xuất hiện ngẫu nhiên khi vào khu (không từ khu khác sang). */
   spawn: Rect;
-  /** Bước vào vùng này thì sang khu khác. */
-  exits: readonly { to: AreaId; zone: Rect }[];
+  /** Lối sang khu khác: phải đứng trong `zone` (ở gần) VÀ bấm vào `hotspot` (cửa, cổng, biển chỉ lối). */
+  exits: readonly AreaExit[];
   /** Điểm đứng khi từ khu `from` đi sang. */
   entrances: Partial<Record<AreaId, Vec>>;
   /**
@@ -47,9 +57,19 @@ export interface AreaMap {
 //                            ↓
 //                      Cổng Tam Quan  (nơi bắt đầu)
 
-/** Lối đi ở mép trái/phải/dưới cảnh (dải mỏng sát mép vùng đi lại). */
-const LEFT_EDGE: Rect = { minX: 40, maxX: 52, minY: 560, maxY: 700 };
-const RIGHT_EDGE: Rect = { minX: 1148, maxX: 1160, minY: 560, maxY: 700 };
+/** Lối đi ở mép trái/phải cảnh: đứng gần mép, bấm vào biển chỉ lối ở góc dưới. */
+const leftExit = (to: AreaId): AreaExit => ({
+  to,
+  zone: { minX: 40, maxX: 160, minY: 560, maxY: 740 },
+  hotspot: { minX: 0, maxX: 180, minY: 690, maxY: 760 },
+  approach: { x: 90, y: 700 },
+});
+const rightExit = (to: AreaId): AreaExit => ({
+  to,
+  zone: { minX: 1040, maxX: 1160, minY: 560, maxY: 740 },
+  hotspot: { minX: 1020, maxX: 1200, minY: 690, maxY: 760 },
+  approach: { x: 1110, y: 700 },
+});
 
 /** Cổng Tam Quan: cổng lớn phía trên, lối đá dẫn vào. Đi qua cổng để vào Sân chùa. */
 const CONG_TAM_QUAN: AreaMap = {
@@ -59,7 +79,14 @@ const CONG_TAM_QUAN: AreaMap = {
     { id: 'den-da-phai', x: 820, y: 480, r: 24 },
   ],
   spawn: { minX: 450, maxX: 750, minY: 640, maxY: 710 },
-  exits: [{ to: 'san-chua', zone: { minX: 500, maxX: 700, minY: 420, maxY: 432 } }],
+  exits: [
+    {
+      to: 'san-chua',
+      zone: { minX: 470, maxX: 730, minY: 420, maxY: 530 },
+      hotspot: { minX: 500, maxX: 700, minY: 170, maxY: 465 }, // lòng cổng giữa + biển chỉ lối
+      approach: { x: 600, y: 470 },
+    },
+  ],
   entrances: { 'san-chua': { x: 600, y: 480 } },
 };
 
@@ -73,10 +100,20 @@ const SAN_CHUA: AreaMap = {
   ],
   spawn: { minX: 420, maxX: 780, minY: 620, maxY: 710 },
   exits: [
-    { to: 'chinh-dien', zone: { minX: 380, maxX: 820, minY: 400, maxY: 412 } },
-    { to: 'cong-tam-quan', zone: { minX: 480, maxX: 720, minY: 728, maxY: 740 } },
-    { to: 'ho-sen', zone: LEFT_EDGE },
-    { to: 'gac-chuong', zone: RIGHT_EDGE },
+    {
+      to: 'chinh-dien',
+      zone: { minX: 360, maxX: 840, minY: 400, maxY: 480 }, // hiên điện
+      hotspot: { minX: 300, maxX: 900, minY: 110, maxY: 400 }, // mặt tiền Chính điện
+      approach: { x: 450, y: 420 },
+    },
+    {
+      to: 'cong-tam-quan',
+      zone: { minX: 440, maxX: 760, minY: 670, maxY: 740 },
+      hotspot: { minX: 480, maxX: 720, minY: 725, maxY: 760 }, // biển "↓ Cổng Tam Quan"
+      approach: { x: 600, y: 712 },
+    },
+    leftExit('ho-sen'),
+    rightExit('gac-chuong'),
   ],
   entrances: {
     'chinh-dien': { x: 470, y: 440 },
@@ -96,7 +133,7 @@ const HO_SEN: AreaMap = {
     { id: 'ho-4', x: 820, y: 565, r: 95 },
   ],
   spawn: { minX: 960, maxX: 1100, minY: 600, maxY: 720 },
-  exits: [{ to: 'san-chua', zone: RIGHT_EDGE }],
+  exits: [rightExit('san-chua')],
   entrances: { 'san-chua': { x: 1110, y: 640 } },
 };
 
@@ -108,7 +145,7 @@ const GAC_CHUONG: AreaMap = {
     { id: 'cot-lau-phai', x: 745, y: 450, r: 18 },
   ],
   spawn: { minX: 120, maxX: 420, minY: 600, maxY: 720 },
-  exits: [{ to: 'san-chua', zone: LEFT_EDGE }],
+  exits: [leftExit('san-chua')],
   entrances: { 'san-chua': { x: 90, y: 640 } },
 };
 
@@ -162,6 +199,9 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
 
 export const inRect = (p: Vec, r: Rect) =>
   p.x >= r.minX && p.x <= r.maxX && p.y >= r.minY && p.y <= r.maxY;
+
+/** Lối vào ở chỗ bấm `p` (toạ độ thế giới), nếu có. */
+export const exitAt = (map: AreaMap, p: Vec) => map.exits.find((e) => inRect(p, e.hotspot));
 
 export function clampToBounds(p: Vec, map: AreaMap): Vec {
   return {

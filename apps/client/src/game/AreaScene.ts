@@ -1,8 +1,22 @@
 import Phaser from 'phaser';
-import { PRAYER_BUBBLE_MS, mapFor, type ActivityItem, type AreaMap, type Vec } from '@chua/shared';
+import {
+  AREAS,
+  PRAYER_BUBBLE_MS,
+  WORLD,
+  exitAt,
+  inRect,
+  mapFor,
+  type AreaExit,
+  type ActivityItem,
+  type AreaMap,
+  type Vec,
+} from '@chua/shared';
 import { C } from './palette';
 import { PlayerSprite } from './PlayerSprite';
+import { showToast } from './store';
 import type { RemotePlayer, TempleRoom } from '../net/game';
+
+const areaName = (id: string) => AREAS.find((a) => a.id === id)?.name ?? id;
 
 /**
  * Lớp nền cho cảnh mỗi khu: đồng bộ người chơi từ room, điều khiển, hiệu ứng hoạt động.
@@ -19,6 +33,9 @@ export abstract class AreaScene extends Phaser.Scene {
   >;
   private lastDir = { x: 0, y: 0 };
   protected censerSmoke: Phaser.GameObjects.Particles.ParticleEmitter[] = [];
+  /** Người dùng bật "giảm chuyển động" → bỏ các chuyển động trang trí lặp lại. */
+  protected reducedMotion =
+    typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   constructor(
     key: string,
@@ -31,6 +48,17 @@ export abstract class AreaScene extends Phaser.Scene {
     this.room = data.room;
     this.map = mapFor(this.areaId);
   }
+
+  /** Phóng camera vừa phủ kín khung (như ảnh nền), giới hạn trong cảnh. */
+  private fitCamera() {
+    const { width, height } = this.scale.gameSize;
+    const cam = this.cameras.main;
+    cam.setZoom(Math.max(width / WORLD.width, height / WORLD.height));
+    cam.setBounds(0, 0, WORLD.width, WORLD.height);
+    if (!this.followingSelf) cam.centerOn(WORLD.width / 2, WORLD.height / 2);
+  }
+
+  private followingSelf = false;
 
   /** Vẽ khung cảnh của khu. */
   protected abstract drawEnvironment(): void;
@@ -49,12 +77,16 @@ export abstract class AreaScene extends Phaser.Scene {
   }
 
   create() {
+    this.fitCamera();
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.fitCamera, this);
+    if (!this.reducedMotion) this.cameras.main.fadeIn(400, 244, 235, 217);
     this.drawEnvironment();
     // Khu ngồi cố định (Chính điện): không điều khiển di chuyển.
     if (!this.map.seats) this.setupInput();
     this.bindRoom();
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.fitCamera, this);
       this.unsubscribers.forEach((off) => off());
       this.unsubscribers = [];
     });
@@ -63,7 +95,10 @@ export abstract class AreaScene extends Phaser.Scene {
   update(_time: number, dtMs: number) {
     const now = performance.now();
     for (const sprite of this.sprites.values()) sprite.tick(now, dtMs);
-    if (!this.map.seats) this.sendKeyboardDirection();
+    if (!this.map.seats) {
+      this.sendKeyboardDirection();
+      this.hintNearbyExit();
+    }
   }
 
   // ---------- Đồng bộ với room ----------
@@ -109,6 +144,12 @@ export abstract class AreaScene extends Phaser.Scene {
     });
     sprite.setAction(p.action); // vd. vào Chính điện là đang ngồi trên thảm
     this.sprites.set(id, sprite);
+    if (id === this.room.sessionId) {
+      // Camera bám theo nhân vật của mình (chỉ trượt khi khung hẹp hơn cảnh).
+      const lerp = this.reducedMotion ? 1 : 0.1;
+      this.cameras.main.startFollow(sprite, true, lerp, lerp);
+      this.followingSelf = true;
+    }
     this.unsubscribers.push(
       p.onChange(() => {
         sprite.motion.push(performance.now(), p.x, p.y);
@@ -122,12 +163,20 @@ export abstract class AreaScene extends Phaser.Scene {
 
   private setupInput() {
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
+      const exit = exitAt(this.map, { x: pointer.worldX, y: pointer.worldY });
+      if (exit) return this.clickExit(exit);
       const target = this.redirectClick({ x: pointer.worldX, y: pointer.worldY });
       if (!target) return;
       const { x, y } = target;
       this.room.send('move_to', { x, y });
       this.lastDir = { x: 0, y: 0 };
       this.showClickMarker(x, y);
+    });
+
+    // Rê chuột lên cửa/cổng/biển chỉ lối → con trỏ bàn tay (bấm được).
+    this.input.on(Phaser.Input.Events.POINTER_MOVE, (pointer: Phaser.Input.Pointer) => {
+      const over = Boolean(exitAt(this.map, { x: pointer.worldX, y: pointer.worldY }));
+      this.input.setDefaultCursor(over ? 'pointer' : 'default');
     });
 
     const kb = this.input.keyboard!;
@@ -138,6 +187,43 @@ export abstract class AreaScene extends Phaser.Scene {
       false,
     ) as typeof this.keys;
   }
+
+  private selfPos(): Vec | undefined {
+    const me = this.room.state.players?.get(this.room.sessionId);
+    return me ? { x: me.x, y: me.y } : undefined;
+  }
+
+  /**
+   * Bấm vào lối sang khu khác: đang ở gần thì xin vào (server kiểm tra lại); còn xa thì
+   * tự đi tới gần lối đó và nhắc bấm lần nữa — không tự chuyển khu.
+   */
+  private clickExit(exit: AreaExit) {
+    const me = this.selfPos();
+    this.lastDir = { x: 0, y: 0 };
+    if (me && inRect(me, exit.zone)) {
+      this.room.send('enter', { to: exit.to });
+      return;
+    }
+    this.room.send('move_to', exit.approach);
+    this.showClickMarker(exit.approach.x, exit.approach.y);
+    showToast(`Đang đi tới lối sang ${areaName(exit.to)} · tới nơi bấm lần nữa để vào`);
+  }
+
+  /** Vừa bước vào vùng gần một lối đi → nhắc người chơi có thể bấm để sang khu đó. */
+  private hintNearbyExit() {
+    const me = this.selfPos();
+    if (!me) return;
+    const exit = this.map.exits.find((e) => inRect(me, e.zone));
+    const to = exit?.to ?? null;
+    if (to === this.nearExit) return;
+    // Lần đầu (vừa xuất hiện ở lối vào từ khu bên kia) thì ghi nhận im lặng, không nhắc.
+    const firstCheck = this.nearExit === undefined;
+    this.nearExit = to;
+    if (to && !firstCheck) showToast(`Bấm vào lối vào để sang ${areaName(to)}`);
+  }
+
+  /** Lối đi đang đứng gần; undefined = chưa kiểm tra lần nào (nhân vật chưa có trong state). */
+  private nearExit: string | null | undefined = undefined;
 
   private sendKeyboardDirection() {
     const typing = document.activeElement?.matches('input, textarea, select, [contenteditable]');

@@ -14,12 +14,27 @@ import { joinArea, reconnect, type TempleRoom } from '../net/game';
 import { createGame } from '../game/createGame';
 import { logout } from '../auth/session';
 import { LotusLogo } from '../ui/icons';
-import { ArrowRightIcon, IncenseIcon, LogoutIcon } from '../ui/icons-game';
+import {
+  ArrowRightIcon,
+  IncenseIcon,
+  LogoutIcon,
+  SoundOffIcon,
+  SoundOnIcon,
+} from '../ui/icons-game';
+import {
+  audioReady,
+  muted,
+  playBell,
+  playWoodBlock,
+  setAmbience,
+  setMuted,
+  unlockAudio,
+} from '../audio/sound';
 import { bindRoomToStore, merit, resetStore, showToast } from '../game/store';
 import { ActionBar } from '../ui/game/ActionBar';
 import { BowCard } from '../ui/game/BowCard';
 import { DonationModal } from '../ui/game/DonationModal';
-import { Sidebar } from '../ui/game/Sidebar';
+import { DRAWER_QUERY, Sidebar } from '../ui/game/Sidebar';
 import { Toasts } from '../ui/game/Toasts';
 
 type Conn =
@@ -56,6 +71,7 @@ export function GameScreen({ user }: { user: PublicUser }) {
   const online = useOnlineTotal();
   const area = place.area;
   const [dialog, setDialog] = useState<'bow' | 'donate' | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Kết nối room (và kết nối lại khi rớt mạng).
   useEffect(() => {
@@ -73,6 +89,9 @@ export function GameScreen({ user }: { user: PublicUser }) {
         setZone(r.state.zone ?? 1);
       };
       r.onStateChange(sync);
+      // Âm thanh: tiếng chuông cho cả khu, tiếng mõ mỗi khi mình lạy được một lạy.
+      r.onMessage('activity', (item: { kind: string }) => item.kind === 'bell' && playBell());
+      r.onMessage('bow_progress', () => playWoodBlock());
       // Bước vào lối đi → server báo sang khu khác.
       r.onMessage('travel', ({ to }: { to: AreaId }) => {
         if (!disposed) setPlace({ area: to, from: place.area });
@@ -110,6 +129,11 @@ export function GameScreen({ user }: { user: PublicUser }) {
   }, [place, attempt]);
 
   useEffect(() => () => resetStore(), []);
+
+  useEffect(() => {
+    setAmbience(area);
+    return () => setAmbience(null);
+  }, [area]);
   useEffect(() => setDialog(null), [area]); // đổi khu thì đóng hộp thoại đang mở
 
   const room = conn.status === 'connected' ? conn.room : undefined;
@@ -174,10 +198,22 @@ export function GameScreen({ user }: { user: PublicUser }) {
               onBow={() => setDialog('bow')}
               onDonate={() => setDialog('donate')}
               onBell={() => room.send('bell')}
-              onPray={() => prayerInput.current?.focus()}
+              onPray={() => {
+                // Điện thoại: mở ngăn kéo rồi mới focus ô lời nguyện (chờ hiệu ứng trượt).
+                if (matchMedia(DRAWER_QUERY).matches && !drawerOpen) {
+                  setDrawerOpen(true);
+                  setTimeout(() => prayerInput.current?.focus(), 260);
+                } else prayerInput.current?.focus();
+              }}
             />
           )}
           <Toasts />
+          {!muted.value && !audioReady.value && (
+            // Trình duyệt còn khoá âm thanh (vd. vào lại bằng phiên đã lưu, chưa bấm gì).
+            <button type="button" class="audio-hint" onClick={() => unlockAudio()}>
+              <SoundOnIcon size={18} /> Chạm để bật âm thanh
+            </button>
+          )}
           {conn.status !== 'connected' && (
             <div class="stage-status" role="status">
               {conn.status === 'failed' ? (
@@ -203,6 +239,8 @@ export function GameScreen({ user }: { user: PublicUser }) {
         </div>
         <Sidebar
           canPray={canDo(area, 'prayer')}
+          drawerOpen={drawerOpen}
+          onToggleDrawer={() => setDrawerOpen((v) => !v)}
           selfName={user.username}
           prayerInputRef={prayerInput}
           onPray={(text) => room?.send('prayer', { text })}
@@ -340,14 +378,29 @@ function TopBar({
         })}
       </nav>
       <div class="topbar-right">
-        <span class="online">
+        <span class="online" title={`${online.toLocaleString('vi-VN')} phật tử đang ở chùa`}>
           <span class="online-dot" aria-hidden="true" />
-          <strong>{online.toLocaleString('vi-VN')}</strong> phật tử đang ở chùa
+          <strong>{online.toLocaleString('vi-VN')}</strong>
+          <span class="online-label"> phật tử đang ở chùa</span>
         </span>
         <span class="merit-pill">
           <IncenseIcon />
-          Phước <strong>{(merit.value ?? user.merit).toLocaleString('vi-VN')}</strong>
+          {/* key đổi theo số dư → chạy lại hiệu ứng "nảy" mỗi khi phước thay đổi */}
+          Phước{' '}
+          <strong key={merit.value ?? user.merit} class="merit-value">
+            {(merit.value ?? user.merit).toLocaleString('vi-VN')}
+          </strong>
         </span>
+        <button
+          type="button"
+          class="sound-toggle"
+          aria-pressed={!muted.value}
+          aria-label={muted.value ? 'Bật âm thanh' : 'Tắt âm thanh'}
+          title={muted.value ? 'Bật âm thanh' : 'Tắt âm thanh'}
+          onClick={() => setMuted(!muted.value)}
+        >
+          {muted.value ? <SoundOffIcon /> : <SoundOnIcon />}
+        </button>
         <div class="account">
           <button
             type="button"

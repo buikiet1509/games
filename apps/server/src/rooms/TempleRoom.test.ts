@@ -4,7 +4,9 @@ import { Client, type Room } from 'colyseus.js';
 import { matchMaker, type Server } from '@colyseus/core';
 import {
   HALL_SEATS,
+  mapFor,
   type ActivityItem,
+  type AreaId,
   type LeaderboardEntry,
   type ServerMessages,
 } from '@chua/shared';
@@ -117,9 +119,15 @@ const playerOf = (room: Room<StateView>, sessionId = room.sessionId) =>
   room.state.players.get(sessionId);
 
 async function walkTo(room: TestRoom, x: number, y: number) {
+  const near = () => {
+    const p = playerOf(room)!;
+    return Math.hypot(p.x - x, p.y - y) <= 2;
+  };
+  await until(() => Boolean(playerOf(room))); // vừa vào room: chờ state có nhân vật
   room.send('move_to', { x, y });
-  await sleep(150);
-  await until(() => playerOf(room)!.moving === false, 8000);
+  // Chờ bản cập nhật "đang đi" về trước (hoặc đã ở sẵn đó), rồi mới chờ dừng.
+  await until(() => playerOf(room)!.moving || near(), 3000);
+  await until(() => !playerOf(room)!.moving, 8000);
 }
 
 const leave = async (...rooms: (Room | undefined)[]) => {
@@ -230,11 +238,23 @@ describe('khu vực', () => {
     await leave(inside);
   });
 
-  it('bước lên hiên điện → được báo chuyển vào Chính điện, vào thì ngồi vào chỗ', async () => {
+  it('phải ở gần VÀ bấm vào cửa điện mới vào được Chính điện; vào thì ngồi vào chỗ', async () => {
     const u = await signUp();
     const yard = await connect(u.token, 'san-chua');
-    yard.send('move_to', { x: 450, y: 400 });
-    expect(await nextMessage(yard, 'travel', undefined, 8000)).toEqual({ to: 'chinh-dien' });
+    await nextMessage(yard, 'merit');
+
+    // Ở xa mà bấm → bị từ chối.
+    yard.send('enter', { to: 'chinh-dien' });
+    expect((await nextMessage(yard, 'action_error')).message).toMatch(/đến gần lối vào/);
+
+    // Đi lên hiên: không còn tự chuyển khu khi bước vào.
+    await walkTo(yard, 450, 420);
+    await sleep(300);
+    expect(yard.inbox.some((m) => m.type === 'travel')).toBe(false);
+
+    // Ở gần + bấm → được vào.
+    yard.send('enter', { to: 'chinh-dien' });
+    expect(await nextMessage(yard, 'travel')).toEqual({ to: 'chinh-dien' });
     await leave(yard);
 
     const hall = await connect(u.token, 'chinh-dien', { from: 'san-chua' });
@@ -252,21 +272,32 @@ describe('khu vực', () => {
 });
 
 describe('chuyển khu & bản sao', () => {
-  async function travelFrom(area: string, x: number, y: number) {
+  /** Đi tới điểm đứng chờ của lối ra rồi bấm vào lối đó. */
+  async function travelFrom(area: AreaId, to: AreaId) {
     const r = await connect((await signUp()).token, area);
-    r.send('move_to', { x, y });
-    const msg = await nextMessage(r, 'travel', undefined, 10_000);
+    const exit = mapFor(area).exits.find((e) => e.to === to)!;
+    await walkTo(r, exit.approach.x, exit.approach.y);
+    r.send('enter', { to });
+    const msg = await nextMessage(r, 'travel', undefined, 5000);
     await leave(r);
     return msg.to;
   }
 
   it('các lối đi nối đúng khu: cổng ↔ sân ↔ hồ sen / gác chuông', async () => {
-    expect(await travelFrom('cong-tam-quan', 600, 420)).toBe('san-chua');
-    expect(await travelFrom('san-chua', 40, 640)).toBe('ho-sen');
-    expect(await travelFrom('san-chua', 1160, 640)).toBe('gac-chuong');
-    expect(await travelFrom('san-chua', 600, 740)).toBe('cong-tam-quan');
-    expect(await travelFrom('ho-sen', 1160, 640)).toBe('san-chua');
-  }, 40_000);
+    expect(await travelFrom('cong-tam-quan', 'san-chua')).toBe('san-chua');
+    expect(await travelFrom('san-chua', 'ho-sen')).toBe('ho-sen');
+    expect(await travelFrom('san-chua', 'gac-chuong')).toBe('gac-chuong');
+    expect(await travelFrom('san-chua', 'cong-tam-quan')).toBe('cong-tam-quan');
+    expect(await travelFrom('ho-sen', 'san-chua')).toBe('san-chua');
+    expect(await travelFrom('gac-chuong', 'san-chua')).toBe('san-chua');
+  }, 60_000);
+
+  it('không có lối thẳng thì không đi được (vd. từ cổng vào thẳng Chính điện)', async () => {
+    const r = await connect((await signUp()).token, 'cong-tam-quan');
+    r.send('enter', { to: 'chinh-dien' });
+    expect((await nextMessage(r, 'action_error')).message).toMatch(/Không có lối/);
+    await leave(r);
+  });
 
   it('Chính điện đủ 40 người → người thứ 41 vào "Khu 2"; API đếm đủ người online', async () => {
     const { token } = await signUp();

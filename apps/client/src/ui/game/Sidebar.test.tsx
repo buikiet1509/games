@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/preact';
 import userEvent from '@testing-library/user-event';
 import type { ActivityItem } from '@chua/shared';
-import { ActivityFeed } from './Sidebar';
+import { ActivityFeed, Sidebar } from './Sidebar';
+import { activity } from '../../game/store';
 
 const item = (p: Partial<ActivityItem>): ActivityItem => ({
   id: Math.random().toString(36),
@@ -66,5 +67,50 @@ describe('ActivityFeed', () => {
     await userEvent.click(buttons[0]!);
     expect(onReport).toHaveBeenCalledWith('p1');
     expect(buttons[0]).toBeDisabled();
+  });
+});
+
+describe('Sidebar (ngăn kéo trên điện thoại)', () => {
+  it('thanh kéo hiện hoạt động mới nhất và báo trạng thái mở/đóng', async () => {
+    activity.value = [item({ kind: 'donation', name: 'minh_tam', amount: 100 })];
+    const onToggle = vi.fn();
+    const props = {
+      canPray: true,
+      onPray: () => {},
+      onReport: () => {},
+      prayerInputRef: { current: null },
+      selfName: 'ban',
+      onToggleDrawer: onToggle,
+    };
+    const { rerender } = render(<Sidebar {...props} drawerOpen={false} />);
+    const handle = screen.getByRole('button', { name: /Hoạt động & lời nguyện/ });
+    expect(handle).toHaveAttribute('aria-expanded', 'false');
+    expect(handle).toHaveTextContent('minh_tam đã công đức 100 phước');
+    await userEvent.click(handle);
+    expect(onToggle).toHaveBeenCalled();
+
+    rerender(<Sidebar {...props} drawerOpen />);
+    expect(screen.getByRole('button', { name: /Hoạt động & lời nguyện/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    activity.value = [];
+  });
+
+  it('ngoài Chính điện: ô lời nguyện bị khoá và nói rõ lý do', () => {
+    render(
+      <Sidebar
+        canPray={false}
+        onPray={() => {}}
+        onReport={() => {}}
+        prayerInputRef={{ current: null }}
+        selfName="ban"
+        drawerOpen={false}
+        onToggleDrawer={() => {}}
+      />,
+    );
+    const input = screen.getByRole('textbox', { name: 'Gửi lời nguyện' });
+    expect(input).toBeDisabled();
+    expect(input).toHaveAttribute('placeholder', 'Vào Chính điện để gửi lời nguyện');
   });
 });

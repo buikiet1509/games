@@ -13,7 +13,38 @@ const handlers = () => ({
 });
 
 describe('ActionBar', () => {
-  afterEach(resetStore);
+  afterEach(() => {
+    resetStore();
+    window.localStorage.clear();
+  });
+
+  it('ẩn/hiện thanh công cụ, nhớ lựa chọn cho lần sau', async () => {
+    const { unmount } = render(<ActionBar area="san-chua" {...handlers()} />);
+    const toggle = screen.getByRole('button', { name: 'Ẩn' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+    await userEvent.click(toggle);
+    const show = screen.getByRole('button', { name: /Hiện thanh công cụ/ });
+    expect(show).toHaveAttribute('aria-expanded', 'false');
+    // Thanh đã ẩn: không focus/bấm được.
+    expect(document.getElementById('action-bar')).toHaveAttribute('inert');
+
+    unmount();
+    render(<ActionBar area="san-chua" {...handlers()} />);
+    expect(screen.getByRole('button', { name: /Hiện thanh công cụ/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Hiện thanh công cụ/ }));
+    expect(document.getElementById('action-bar')).not.toHaveAttribute('inert');
+  });
+
+  it('đang ẩn mà hương còn hồi chiêu thì nút gọn hiện số giây', async () => {
+    window.localStorage.setItem('chua:actionbar-collapsed', '1');
+    const { cooldownUntil } = await import('../../game/store');
+    cooldownUntil.value = { incense: Date.now() + 42_000, bell: 0 };
+    render(<ActionBar area="san-chua" {...handlers()} />);
+    expect(screen.getByRole('button', { name: /Hiện thanh công cụ/ })).toHaveTextContent(
+      /hương (41|42)s/,
+    );
+  });
 
   it('ở Sân chùa: thắp hương được; lạy Phật thì nhắc vào Chính điện', async () => {
     const h = handlers();

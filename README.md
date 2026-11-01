@@ -42,7 +42,7 @@ Client (build time): `VITE_GAME_URL` — địa chỉ WebSocket game server ở 
 
 ## Multiplayer
 
-- 5 khu, mỗi khu một loại room Colyseus (tối đa 150 người; Chính điện 40 chỗ ngồi). Sơ đồ: **Cổng Tam Quan** (nơi bắt đầu) → **Sân chùa** (lư hương) → hiên điện vào **Chính điện**; từ sân rẽ trái sang **Hồ sen**, rẽ phải sang **Gác chuông**. Bản đồ, lối đi, lối vào ở `AREA_MAPS` (`packages/shared/src/world.ts`). Bước vào lối đi hoặc bấm tab để chuyển khu; server báo `travel` và client chuyển room, xuất hiện ở đúng lối vào.
+- 5 khu, mỗi khu một loại room Colyseus (tối đa 150 người; Chính điện 40 chỗ ngồi). Sơ đồ: **Cổng Tam Quan** (nơi bắt đầu) → **Sân chùa** (lư hương) → hiên điện vào **Chính điện**; từ sân rẽ trái sang **Hồ sen**, rẽ phải sang **Gác chuông**. Bản đồ, lối đi, lối vào ở `AREA_MAPS` (`packages/shared/src/world.ts`). Muốn sang khu khác phải **đứng gần lối vào và bấm vào nó** (cửa điện, lòng cổng, biển chỉ lối); đi ngang qua không tự chuyển. Bấm từ xa thì nhân vật tự đi tới gần, bấm lần nữa để vào. Server kiểm tra khoảng cách (`enter` → `travel`). Tab trên thanh trên vẫn chuyển thẳng.
 - Khu đầy thì `joinOrCreate` tự mở bản sao; mỗi bản sao nhận số nhỏ nhất chưa dùng và hiển thị "Chính điện · Khu 2". `GET /api/online` trả tổng số người và theo từng khu.
 - Hành động theo khu (`AREA_ACTIONS` trong `packages/shared/src/world.ts`): Sân chùa chỉ thắp hương; lạy Phật, cầu nguyện, công đức trong Chính điện; thỉnh chuông ở Gác chuông. Server từ chối và nhắc nơi cần tới.
 - Trong Chính điện mọi người **ngồi cố định trên thảm, không di chuyển**: server xếp chỗ trống gần tượng Phật nhất (5 hàng × 8 chỗ hai bên lối giữa, `HALL_SEATS`), rời đi thì nhường chỗ. Sức chứa mỗi điện = 40 chỗ; đầy thì matchmaking tự mở điện mới. Rời điện bằng nút "Ra Sân chùa".
@@ -64,6 +64,13 @@ Client (build time): `VITE_GAME_URL` — địa chỉ WebSocket game server ở 
 - Ghi DB theo lô: phước nhận được gom 5 giây/lần, lời nguyện 2 giây/lần; tắt server sẽ ghi nốt phần còn lại.
 - Bảng công đức ngày/tuần/tất cả: Redis sorted set, đồng bộ giữa các room qua presence pub/sub; khi Redis trống thì tự dựng lại từ bảng `Donation`. API: `GET /api/leaderboard?period=day|week|all&limit=10`.
 - Thử nhanh: mở hai cửa sổ (một cửa sổ thường, một cửa sổ ẩn danh) và đăng nhập hai tài khoản khác nhau.
+
+## Âm thanh & giao diện
+
+- Âm thanh tổng hợp bằng Web Audio (`apps/client/src/audio/sound.ts`), không cần file: chuông gió ở các khu ngoài trời, tiếng mõ chậm trong Chính điện, tiếng chuông chùa cho cả khu khi có người thỉnh, tiếng mõ mỗi lạy. Bật sau thao tác đầu tiên (chính sách tự phát của trình duyệt); nút tắt tiếng trên thanh trên, nhớ lựa chọn trong trình duyệt.
+- Camera phóng vừa khung và bám theo nhân vật của mình; đổi khu có hiệu ứng mờ dần.
+- Responsive: laptop 1280px đủ chỗ 5 tab; dưới 900px cột phải thành ngăn kéo trượt lên (thanh kéo hiện hoạt động mới nhất), nút "Cầu nguyện" tự mở ngăn kéo.
+- Tôn trọng "giảm chuyển động" của hệ điều hành: tắt gợn sóng, lửa nến lung linh, giảm khói hương, camera không trượt.
 
 ## API xác thực
 

@@ -114,6 +114,7 @@ export class HallScene extends AreaScene {
       g.fillStyle(C.candle).fillRect(x - 4, 302, 8, 42);
       const glow = this.add.circle(x, 292, 18, C.goldLight, 0.25).setDepth(-79);
       const flame = this.add.ellipse(x, 292, 8, 15, C.ember).setDepth(-79);
+      if (this.reducedMotion) continue;
       this.tweens.add({
         targets: [flame, glow],
         scaleY: { from: 0.9, to: 1.1 },

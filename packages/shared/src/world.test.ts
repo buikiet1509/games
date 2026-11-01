@@ -4,6 +4,7 @@ import {
   PLAYER_RADIUS,
   PLAYER_SPEED,
   canDo,
+  exitAt,
   inRect,
   mapFor,
   randomSpawn,
@@ -80,23 +81,24 @@ describe('resolveCollisions / randomSpawn', () => {
 
 describe('bản đồ các khu', () => {
   for (const [id, map] of Object.entries(AREA_MAPS)) {
-    it(`${id}: lối vào hợp lệ, không nằm trong vật cản hay vùng chuyển khu`, () => {
+    it(`${id}: điểm xuất hiện ở lối vào không nằm trong vật cản`, () => {
       for (const entry of Object.values(map!.entrances)) {
         expect(resolveCollisions(entry!, map!)).toEqual(entry);
-        expect(map!.exits.some((e) => inRect(entry!, e.zone))).toBe(false);
       }
     });
-    it(`${id}: đi được tới lối ra (không bị vật cản chặn kín)`, () => {
+    it(`${id}: điểm đứng chờ của mỗi lối ra nằm trong vùng "ở gần" và đi tới được`, () => {
       for (const exit of map!.exits) {
-        const target = { x: exit.zone.minX + 10, y: (exit.zone.minY + exit.zone.maxY) / 2 };
+        expect(inRect(exit.approach, exit.zone)).toBe(true);
+        expect(resolveCollisions(exit.approach, map!)).toEqual(exit.approach);
         let r = step(
-          map!.entrances[Object.keys(map!.entrances)[0] as never] ?? { x: 600, y: 650 },
-          { kind: 'target', ...target },
+          randomSpawn(map!, () => 0.5),
+          { kind: 'target', ...exit.approach },
           0.1,
           map!,
         );
-        for (let i = 0; i < 200 && r.intent.kind !== 'idle'; i++)
+        for (let i = 0; i < 200 && r.intent.kind !== 'idle'; i++) {
           r = step(r.pos, r.intent, 0.1, map!);
+        }
         expect(inRect(r.pos, exit.zone)).toBe(true);
       }
     });
@@ -127,6 +129,15 @@ describe('bản đồ các khu', () => {
         expect(arrives, `${id} → ${exit.to}`).toBeDefined();
       }
     }
+  });
+
+  it('bấm đúng cửa điện / lòng cổng / biển chỉ lối thì nhận ra lối vào tương ứng', () => {
+    expect(exitAt(mapFor('san-chua'), { x: 600, y: 250 })?.to).toBe('chinh-dien');
+    expect(exitAt(mapFor('san-chua'), { x: 110, y: 720 })?.to).toBe('ho-sen');
+    expect(exitAt(mapFor('san-chua'), { x: 1090, y: 720 })?.to).toBe('gac-chuong');
+    expect(exitAt(mapFor('san-chua'), { x: 600, y: 744 })?.to).toBe('cong-tam-quan');
+    expect(exitAt(mapFor('cong-tam-quan'), { x: 600, y: 300 })?.to).toBe('san-chua');
+    expect(exitAt(mapFor('san-chua'), { x: 600, y: 600 })).toBeUndefined(); // giữa sân
   });
 
   it('ngoài sân chỉ thắp hương; lạy, cầu nguyện, công đức trong Chính điện', () => {

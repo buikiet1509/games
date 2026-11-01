@@ -2,7 +2,23 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Ref } from 'preact';
 import { PRAYER_MAX_LENGTH, type ActivityItem } from '@chua/shared';
 import { activity, leaderboard } from '../../game/store';
-import { FlagIcon, SendIcon } from '../icons-game';
+import { ChevronUpIcon, FlagIcon, SendIcon } from '../icons-game';
+
+/** Màn hình hẹp (điện thoại): cột phải thành ngăn kéo trượt lên từ đáy. */
+export const DRAWER_QUERY = '(max-width: 900px)';
+
+export function useMediaQuery(query: string) {
+  const get = () => typeof matchMedia !== 'undefined' && matchMedia(query).matches;
+  const [matches, setMatches] = useState(get);
+  useEffect(() => {
+    if (typeof matchMedia === 'undefined') return;
+    const mq = matchMedia(query);
+    const onChange = () => setMatches(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [query]);
+  return matches;
+}
 
 export function Sidebar({
   canPray,
@@ -10,25 +26,68 @@ export function Sidebar({
   onReport,
   prayerInputRef,
   selfName,
+  drawerOpen,
+  onToggleDrawer,
 }: {
   canPray: boolean;
   onPray: (text: string) => void;
   onReport: (activityId: string) => void;
   prayerInputRef: Ref<HTMLInputElement>;
   selfName: string;
+  drawerOpen: boolean;
+  onToggleDrawer: () => void;
 }) {
+  const isDrawer = useMediaQuery(DRAWER_QUERY);
+  const latest = activity.value.at(-1);
   return (
-    <aside class="sidebar" aria-label="Bảng công đức và hoạt động">
-      <Leaderboard />
-      <section class="feed-section" aria-labelledby="feed-title">
-        <h3 id="feed-title" class="section-title">
-          Hoạt động & lời nguyện
-        </h3>
-        <ActivityFeed items={activity.value} onReport={onReport} selfName={selfName} />
-      </section>
-      <PrayerInput onPray={onPray} inputRef={prayerInputRef} enabled={canPray} />
+    <aside
+      class={`sidebar${drawerOpen ? ' drawer-open' : ''}`}
+      aria-label="Bảng công đức và hoạt động"
+    >
+      <button
+        type="button"
+        class="drawer-handle"
+        aria-expanded={drawerOpen}
+        aria-controls="sidebar-content"
+        onClick={onToggleDrawer}
+      >
+        <span class="drawer-grip" aria-hidden="true" />
+        <span class="drawer-label">
+          <strong>Hoạt động & lời nguyện</strong>
+          {!drawerOpen && latest && <span class="drawer-latest">{summary(latest)}</span>}
+        </span>
+        <ChevronUpIcon class="drawer-chevron" />
+      </button>
+      {/* Ngăn kéo đang đóng: nội dung khuất màn hình, không cho focus bằng phím Tab. */}
+      <div id="sidebar-content" class="sidebar-content" inert={isDrawer && !drawerOpen}>
+        <Leaderboard />
+        <section class="feed-section" aria-labelledby="feed-title">
+          <h3 id="feed-title" class="section-title">
+            Hoạt động & lời nguyện
+          </h3>
+          <ActivityFeed items={activity.value} onReport={onReport} selfName={selfName} />
+        </section>
+        <PrayerInput onPray={onPray} inputRef={prayerInputRef} enabled={canPray} />
+      </div>
     </aside>
   );
+}
+
+/** Một dòng tóm tắt hoạt động mới nhất cho thanh ngăn kéo khi đóng. */
+function summary(item: ActivityItem) {
+  const name = item.name ?? 'Một phật tử';
+  switch (item.kind) {
+    case 'incense':
+      return `${name} vừa thắp hương`;
+    case 'bow':
+      return `${name} đã lạy Phật`;
+    case 'donation':
+      return `${name} đã công đức ${item.amount} phước`;
+    case 'prayer':
+      return `${name}: ${item.text}`;
+    case 'bell':
+      return 'Tiếng chuông chùa vang lên';
+  }
 }
 
 function Leaderboard() {

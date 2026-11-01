@@ -129,6 +129,7 @@ export function createTempleRoom(svc: GameServices) {
       this.handle('bell', (c, sim) => this.ringBell(c, sim));
       this.handle('prayer', (c, sim, msg) => this.pray(c, sim, msg));
       this.handle('report', (c, sim, msg) => this.report(c, sim, msg));
+      this.handle('enter', (c, sim, msg) => this.enter(c, sim, msg));
       // Bỏ qua mọi loại tin nhắn khác thay vì để Colyseus ghi log cảnh báo.
       this.onMessage('*', () => {});
     }
@@ -491,17 +492,20 @@ export function createTempleRoom(svc: GameServices) {
         player.x = Math.round(r.pos.x);
         player.y = Math.round(r.pos.y);
         player.moving = r.moving;
-        this.checkExits(sim);
       }
     }
 
-    /** Bước vào lối đi → báo client chuyển sang khu bên kia (client tự rời room này). */
-    private checkExits(sim: Sim) {
+    /**
+     * Bấm vào lối sang khu khác: chỉ cho qua khi đang đứng gần lối đó (đi ngang qua thì không
+     * tự chuyển). Hợp lệ → báo client chuyển sang khu bên kia (client tự rời room này).
+     */
+    private enter(client: Client, sim: Sim, msg: ClientMessage<'enter'>) {
       if (sim.traveling) return;
-      const exit = this.map.exits.find((e) => inRect(sim.pos, e.zone));
-      if (!exit) return;
-      const client = this.clients.find((c) => c.sessionId === sim.sessionId);
-      if (!client) return;
+      const exit = this.map.exits.find((e) => e.to === msg.to);
+      if (!exit) return this.fail(client, 'enter', 'Không có lối đi tới đó từ đây');
+      if (!inRect(sim.pos, exit.zone)) {
+        return this.fail(client, 'enter', 'Hãy đến gần lối vào hơn rồi bấm lại');
+      }
       sim.traveling = true;
       sim.intent = { kind: 'idle' };
       this.tell(client, 'travel', { to: exit.to });

@@ -21,11 +21,14 @@ export function createGame(parent: HTMLElement, room: TempleRoom, areaId: AreaId
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
-    width: WORLD.width,
-    height: WORLD.height,
     backgroundColor: C.paper,
-    // ENVELOP: phủ kín khung (cắt bớt mép nếu khác tỉ lệ), giống ảnh nền trong thiết kế.
-    scale: { mode: Phaser.Scale.ENVELOP, autoCenter: Phaser.Scale.CENTER_BOTH },
+    // Canvas lấp đầy khung theo kích thước thật; camera trong cảnh tự phóng to vừa khung và
+    // bám theo nhân vật (xem AreaScene.fitCamera) — trên điện thoại dọc vẫn thấy mình và lối đi.
+    scale: {
+      mode: Phaser.Scale.RESIZE,
+      width: parent.clientWidth || WORLD.width,
+      height: parent.clientHeight || WORLD.height,
+    },
     render: { antialias: true },
     banner: false,
     audio: { noAudio: true },

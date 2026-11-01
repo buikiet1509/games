@@ -27,6 +27,8 @@ export const clientMessageSchemas = {
   }),
   prayer: z.object({ text: z.string().trim().min(1).max(PRAYER_MAX_LENGTH) }),
   report: z.object({ activityId: z.string().min(1).max(64) }),
+  /** Bấm vào lối sang khu khác (server kiểm tra người chơi có đang ở gần không). */
+  enter: z.object({ to: z.enum(AREAS.map((a) => a.id) as [AreaId, ...AreaId[]]) }),
 } as const;
 
 export type ClientMessageType = keyof typeof clientMessageSchemas;
@@ -69,7 +71,7 @@ export interface ServerMessages {
   action_error: { action: ClientMessageType; message: string };
   cooldown: { action: 'incense' | 'bell'; remainingMs: number };
   bow_progress: { count: number };
-  /** Bước vào lối đi sang khu khác → client rời room hiện tại và vào khu `to`. */
+  /** Được phép sang khu khác (đã ở gần và bấm lối vào) → client rời room hiện tại và vào khu `to`. */
   travel: { to: AreaId };
   activity: ActivityItem;
   activity_history: ActivityItem[];

@@ -1,12 +1,9 @@
 import Phaser from 'phaser';
-import type { Vec } from '@chua/shared';
 import { AreaScene } from './AreaScene';
 import { drawSignpost, drawSkyHills, drawStoneGround, drawTree } from './scenery';
 import { C } from './palette';
 
 const GROUND_TOP = 340;
-/** Mặt tiền Chính điện: click vào thì đi lên hiên để vào trong. */
-const HALL_FRONT = { minX: 300, maxX: 900, minY: 120, maxY: 400 };
 
 /** Sân chùa: trước Chính điện, lư hương có khói, cây bồ đề, sân lát đá. Chỉ thắp hương ở đây. */
 export class CourtyardScene extends AreaScene {
@@ -26,15 +23,6 @@ export class CourtyardScene extends AreaScene {
     drawSignpost(this, 110, 720, '←  Hồ sen');
     drawSignpost(this, 1090, 720, 'Gác chuông  →');
     drawSignpost(this, 600, 744, '↓  Cổng Tam Quan');
-  }
-
-  protected redirectClick(p: Vec): Vec | null {
-    const f = HALL_FRONT;
-    if (p.x >= f.minX && p.x <= f.maxX && p.y >= f.minY && p.y <= f.maxY) {
-      // Đi lên hiên điện, vòng qua lư hương ở giữa.
-      return { x: p.x < 600 ? 450 : 750, y: this.map.walk.minY };
-    }
-    return super.redirectClick(p);
   }
 
   private drawHall() {
@@ -106,7 +94,7 @@ export class CourtyardScene extends AreaScene {
       const smoke = this.add
         .particles(tip.x, tip.y, 'smoke', {
           lifespan: 2600,
-          frequency: 260,
+          frequency: this.reducedMotion ? 900 : 260,
           speedY: { min: -26, max: -18 },
           speedX: { min: -5, max: 5 },
           accelerationX: { min: -4, max: 4 },
