@@ -10,6 +10,7 @@
 //
 // Chỉ bật khi chạy trên Render (biến RENDER=true) hoặc DB_FORCE_IPV4=true; lỗi thì giữ nguyên chuỗi.
 import { lookup } from 'node:dns/promises';
+import process from 'node:process';
 
 const raw = process.env.DATABASE_URL ?? '';
 const enabled =
