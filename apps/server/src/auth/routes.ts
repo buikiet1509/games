@@ -219,7 +219,22 @@ export async function authRoutes(app: FastifyInstance, deps: AuthDeps) {
   });
 
   // Để kiểm tra sau khi deploy: server có nhận đúng IP của bạn không (rate limit dựa vào đây).
-  app.get('/api/ip', async (request) => ({ ip: ipOf(request) }));
+  // Kèm các header IP mà proxy của nền tảng gửi (chỉ là thông tin của chính người gọi), để chọn
+  // CLIENT_IP_HEADER / TRUST_PROXY_HOPS đúng.
+  app.get('/api/ip', async (request) => ({
+    ip: ipOf(request),
+    headers: Object.fromEntries(
+      [
+        'x-forwarded-for',
+        'cf-connecting-ip',
+        'true-client-ip',
+        'x-real-ip',
+        'x-envoy-external-address',
+      ]
+        .filter((h) => request.headers[h])
+        .map((h) => [h, request.headers[h]]),
+    ),
+  }));
 
   app.get('/api/me', { preHandler: requireAuth(accessTokens) }, async (request) => {
     const user = await prisma.user.findUnique({ where: { id: request.auth!.userId } });
