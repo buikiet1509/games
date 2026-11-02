@@ -6,6 +6,13 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    // Script Node chạy trực tiếp (vd. apps/server/db-url.mjs).
+    files: ['**/*.mjs'],
+    languageOptions: {
+      globals: { process: 'readonly', console: 'readonly', URL: 'readonly' },
+    },
+  },
+  {
     rules: {
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
