@@ -18,6 +18,9 @@ services:
         value: info
       - key: TRUST_PROXY_HOPS
         value: '1'
+      # IP thật của người chơi (Render đứng sau Cloudflare); server cũng tự dùng khi RENDER=true.
+      - key: CLIENT_IP_HEADER
+        value: cf-connecting-ip
       - key: DATABASE_URL
         sync: false # Render hỏi khi tạo: dán chuỗi kết nối Neon
       - key: JWT_ACCESS_SECRET

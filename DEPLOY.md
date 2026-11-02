@@ -83,8 +83,10 @@ https://chua-an-lac.onrender.com/api/ip
 So với IP thật của bạn (tra "what is my ip" trên Google).
 
 - **Trùng** → xong.
+  Server tự dùng header `cf-connecting-ip` khi chạy trên Render (Render đứng sau Cloudflare), nên thường đã đúng. `/api/ip` cũng trả về các header IP mà proxy gửi, để đối chiếu.
+
 - **Khác** (thường là IP của máy chủ trung gian) → trong Render → service → **Environment**, thử lần lượt và mở lại `/api/ip` sau mỗi lần lưu:
-  1. thêm `CLIENT_IP_HEADER` = `cf-connecting-ip`;
+  1. thêm `CLIENT_IP_HEADER` = `true-client-ip`;
   2. nếu vẫn sai: xoá biến trên, đổi `TRUST_PROXY_HOPS` thành `2`.
 
 Nếu không làm bước này, game vẫn chạy; chỉ là khi đông người, giới hạn đăng nhập có thể tính chung cho nhiều người.

@@ -36,6 +36,15 @@ describe('cấu hình cho Render', () => {
     expect(explicit.CLIENT_ORIGIN).toBe('https://chua.example.com');
   });
 
+  it('trên Render tự lấy IP thật từ cf-connecting-ip (trừ khi đặt CLIENT_IP_HEADER khác)', () => {
+    expect(loadConfig({ ...TEST_ENV, RENDER: 'true' }).CLIENT_IP_HEADER).toBe('cf-connecting-ip');
+    expect(
+      loadConfig({ ...TEST_ENV, RENDER: 'true', CLIENT_IP_HEADER: 'true-client-ip' })
+        .CLIENT_IP_HEADER,
+    ).toBe('true-client-ip');
+    expect(loadConfig({ ...TEST_ENV }).CLIENT_IP_HEADER).toBeUndefined();
+  });
+
   it('production không có email vẫn khởi động được', () => {
     expect(() =>
       loadConfig({

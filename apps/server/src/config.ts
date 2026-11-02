@@ -54,6 +54,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     ...env,
     // Render tự cung cấp địa chỉ công khai của service → dùng làm CLIENT_ORIGIN nếu chưa đặt.
     CLIENT_ORIGIN: env.CLIENT_ORIGIN || env.RENDER_EXTERNAL_URL || undefined,
+    // Render đứng sau Cloudflare: IP thật nằm ở cf-connecting-ip (Cloudflare ghi đè giá trị client
+    // tự gửi); X-Forwarded-For có thêm IP Cloudflare và proxy nội bộ của Render.
+    CLIENT_IP_HEADER:
+      env.CLIENT_IP_HEADER || (env.RENDER === 'true' ? 'cf-connecting-ip' : undefined),
   });
   if (!parsed.success) {
     throw new Error(`Biến môi trường không hợp lệ: ${parsed.error.message}`);
