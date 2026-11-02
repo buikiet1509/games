@@ -1,0 +1,27 @@
+name: Deploy
+
+# Tự deploy lên Fly.io (Phần B trong DEPLOY.md) sau khi CI trên nhánh main chạy xanh.
+# Chỉ chạy khi bật biến repo FLY_DEPLOY=true — dùng Render (Phần A) thì Render tự deploy.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-fly
+  cancel-in-progress: false
+
+jobs:
+  api:
+    if: >-
+      vars.FLY_DEPLOY == 'true' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

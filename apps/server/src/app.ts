@@ -1,4 +1,4 @@
-import Fastify from 'fastify';
+import Fastify, { type FastifyInstance } from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
@@ -14,11 +14,15 @@ import { createLeaderboard } from './services/leaderboard';
 import { matchMaker } from '@colyseus/core';
 import { AREAS } from '@chua/shared';
 import { z } from 'zod';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import fastifyStatic from '@fastify/static';
 
 export interface AppDeps {
   prisma: PrismaClient;
   redis: Redis;
-  mailer?: Mailer;
+  /** undefined = tự tạo theo cấu hình; null = không gửi email (tắt quên mật khẩu). */
+  mailer?: Mailer | null;
 }
 
 export async function buildApp(config: Config, deps: AppDeps) {
@@ -77,15 +81,49 @@ export async function buildApp(config: Config, deps: AppDeps) {
     return { period: q.data.period, entries: await leaderboard.top(q.data.period, q.data.limit) };
   });
 
+  if (config.SERVE_CLIENT_DIR) await serveClient(app, path.resolve(config.SERVE_CLIENT_DIR));
+
   await authRoutes(app, {
     config,
     prisma: deps.prisma,
     redis: deps.redis,
-    mailer: deps.mailer ?? createMailer(config, app.log),
+    mailer: deps.mailer === undefined ? createMailer(config, app.log) : deps.mailer,
     accessTokens,
     refreshTokens: createRefreshTokens(deps.prisma),
   });
 
   // Trả về object bọc ngoài: instance Fastify là thenable nên `await` sẽ "mở" mất thuộc tính gắn thêm.
   return { app, accessTokens };
+}
+
+/**
+ * Phục vụ bản build của client cùng địa chỉ với API (một origin duy nhất → cookie đăng nhập
+ * hoạt động mà không cần tên miền riêng). Đường dẫn lạ (vd. /dat-lai-mat-khau) trả index.html.
+ */
+async function serveClient(app: FastifyInstance, dir: string) {
+  if (!existsSync(path.join(dir, 'index.html'))) {
+    app.log.warn({ dir }, 'Không thấy bản build client, bỏ qua phục vụ trang web');
+    return;
+  }
+  await app.register(fastifyStatic, {
+    root: dir,
+    wildcard: false,
+    cacheControl: false, // tự đặt Cache-Control ở setHeaders
+    setHeaders(res, file) {
+      // File trong assets/ có hash trong tên → cache lâu; index.html luôn lấy bản mới.
+      res.setHeader(
+        'Cache-Control',
+        file.includes(`${path.sep}assets${path.sep}`)
+          ? 'public, max-age=31536000, immutable'
+          : 'no-cache',
+      );
+    },
+  });
+  app.setNotFoundHandler((request, reply) => {
+    const url = request.url.split('?')[0]!;
+    if (request.method !== 'GET' || url.startsWith('/api/') || path.extname(url)) {
+      return reply.code(404).send({ error: 'Không tìm thấy' });
+    }
+    return reply.header('Cache-Control', 'no-cache').sendFile('index.html');
+  });
 }

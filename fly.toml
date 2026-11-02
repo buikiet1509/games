@@ -1,0 +1,50 @@
+# Cấu hình Fly.io cho API + game server (xem DEPLOY.md).
+# Đổi `app` thành tên app của bạn (fly launch sẽ hỏi).
+app = "chua-an-lac"
+primary_region = "sin" # Singapore — gần Việt Nam nhất
+
+# Cho server thời gian ghi nốt phước/lời nguyện đang chờ trước khi tắt (xem src/index.ts).
+kill_signal = "SIGTERM"
+kill_timeout = "30s"
+
+[build]
+  dockerfile = "apps/server/Dockerfile"
+
+[deploy]
+  # Image tự chạy migration khi khởi động (start.sh); chạy thêm ở đây để bản lỗi migration
+  # dừng lại trước khi thay phiên bản đang chạy.
+  release_command = "npm run db:deploy"
+  strategy = "rolling"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "2567"
+  LOG_LEVEL = "info"
+  # Đứng sau đúng 1 proxy (Fly) → lấy IP người dùng từ X-Forwarded-For cho rate limit.
+  TRUST_PROXY_HOPS = "1"
+  # Nhiều máy chia sẻ room qua Redis; WebSocket tới nhầm máy được chuyển bằng fly-replay.
+  COLYSEUS_REDIS = "true"
+
+[http_service]
+  internal_port = 2567
+  force_https = true
+  # Game thời gian thực: không tự tắt máy khi vắng (tắt sẽ làm rớt mọi kết nối).
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 800
+    hard_limit = 1200
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "15s"
+    method = "GET"
+    path = "/health"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "1gb"

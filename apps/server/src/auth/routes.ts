@@ -30,7 +30,8 @@ export interface AuthDeps {
   config: Config;
   prisma: PrismaClient;
   redis: Redis;
-  mailer: Mailer;
+  /** null = chưa cấu hình email → tắt quên mật khẩu. */
+  mailer: Mailer | null;
   accessTokens: AccessTokens;
   refreshTokens: RefreshTokens;
 }
@@ -46,6 +47,12 @@ const toPublicUser = (u: User): PublicUser => ({
 export async function authRoutes(app: FastifyInstance, deps: AuthDeps) {
   const { prisma, redis, mailer, accessTokens, refreshTokens, config } = deps;
   const lockout = createLockout(redis);
+  // IP người dùng cho rate limit: header do nền tảng đặt (nếu cấu hình), không thì theo trustProxy.
+  const ipOf = (request: FastifyRequest) => {
+    const header = config.CLIENT_IP_HEADER && request.headers[config.CLIENT_IP_HEADER];
+    const value = Array.isArray(header) ? header[0] : header;
+    return value?.split(',')[0]?.trim() || request.ip;
+  };
 
   async function limit(key: string, max: number, windowSec: number) {
     const r = await hitRateLimit(redis, key, max, windowSec);
@@ -77,7 +84,7 @@ export async function authRoutes(app: FastifyInstance, deps: AuthDeps) {
   const readRefreshCookie = (request: FastifyRequest) => request.cookies[REFRESH_COOKIE];
 
   app.post('/api/auth/register', async (request, reply) => {
-    await limit(`register:ip:${request.ip}`, 10, 3600);
+    await limit(`register:ip:${ipOf(request)}`, 10, 3600);
     const input = parseBody(registerSchema, request.body);
     const weak = checkPasswordPolicy(input.password, input.username);
     if (weak) throw new HttpError(400, weak);
@@ -104,7 +111,7 @@ export async function authRoutes(app: FastifyInstance, deps: AuthDeps) {
   });
 
   app.post('/api/auth/login', async (request, reply) => {
-    await limit(`login:ip:${request.ip}`, 20, 60);
+    await limit(`login:ip:${ipOf(request)}`, 20, 60);
     const input = parseBody(loginSchema, request.body);
 
     const user = await prisma.user.findFirst({
@@ -126,7 +133,7 @@ export async function authRoutes(app: FastifyInstance, deps: AuthDeps) {
   });
 
   app.post('/api/auth/refresh', async (request, reply) => {
-    await limit(`refresh:ip:${request.ip}`, 60, 60);
+    await limit(`refresh:ip:${ipOf(request)}`, 60, 60);
     const token = readRefreshCookie(request);
     const refresh = token ? await refreshTokens.rotate(token) : null;
     const user = refresh ? await prisma.user.findUnique({ where: { id: refresh.userId } }) : null;
@@ -150,7 +157,13 @@ export async function authRoutes(app: FastifyInstance, deps: AuthDeps) {
   });
 
   app.post('/api/auth/forgot', async (request, reply) => {
-    await limit(`forgot:ip:${request.ip}`, 5, 900);
+    if (!mailer) {
+      throw new HttpError(
+        503,
+        'Máy chủ này chưa bật chức năng quên mật khẩu (chưa cấu hình email)',
+      );
+    }
+    await limit(`forgot:ip:${ipOf(request)}`, 5, 900);
     const { email } = parseBody(forgotPasswordSchema, request.body);
     const generic = { message: 'Nếu email tồn tại, liên kết đặt lại mật khẩu đã được gửi.' };
 
@@ -179,7 +192,7 @@ export async function authRoutes(app: FastifyInstance, deps: AuthDeps) {
   });
 
   app.post('/api/auth/reset', async (request, reply) => {
-    await limit(`reset:ip:${request.ip}`, 10, 900);
+    await limit(`reset:ip:${ipOf(request)}`, 10, 900);
     const input = parseBody(resetPasswordSchema, request.body);
     const row = await prisma.passwordResetToken.findUnique({
       where: { tokenHash: sha256(input.token) },
@@ -204,6 +217,9 @@ export async function authRoutes(app: FastifyInstance, deps: AuthDeps) {
     await lockout.clear(`user:${row.userId}`);
     return reply.code(204).send();
   });
+
+  // Để kiểm tra sau khi deploy: server có nhận đúng IP của bạn không (rate limit dựa vào đây).
+  app.get('/api/ip', async (request) => ({ ip: ipOf(request) }));
 
   app.get('/api/me', { preHandler: requireAuth(accessTokens) }, async (request) => {
     const user = await prisma.user.findUnique({ where: { id: request.auth!.userId } });

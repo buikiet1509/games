@@ -22,15 +22,21 @@ if (await services.leaderboard.rebuildIfEmpty(prisma)) {
   app.log.info('Đã dựng lại bảng công đức từ lịch sử công đức');
 }
 services.start();
-const gameServer = createGameServer(app.server, services, { clientOrigin: config.CLIENT_ORIGIN });
+const gameServer = createGameServer(app.server, services, {
+  clientOrigin: config.CLIENT_ORIGIN,
+  redisUrl: config.COLYSEUS_REDIS ? config.REDIS_URL : undefined,
+  flyMachineId: config.FLY_MACHINE_ID,
+});
 
 await gameServer.listen(config.PORT);
+await gameServer.registerMachine();
 app.log.info(`Server đang chạy tại http://localhost:${config.PORT}`);
 
 let shuttingDown = false;
 const shutdown = async () => {
   if (shuttingDown) return;
   shuttingDown = true;
+  await gameServer.unregisterMachine().catch(() => {});
   await gameServer.gracefullyShutdown(false);
   await services.stop(); // ghi nốt phước và lời nguyện còn trong hàng đợi
   await app.close();

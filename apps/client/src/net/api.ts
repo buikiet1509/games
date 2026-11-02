@@ -9,6 +9,13 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Địa chỉ API. Dev: để trống (Vite proxy `/api` → cùng origin). Production: client ở Cloudflare
+ * Pages, API ở Fly.io (vd. https://api.chua.example.com) — hai subdomain cùng tên miền gốc nên
+ * cookie SameSite=Strict vẫn được gửi.
+ */
+export const API_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+
 // Access token chỉ nằm trong bộ nhớ (không localStorage) để giảm rủi ro XSS đánh cắp.
 let accessToken: string | null = null;
 let refreshing: Promise<AuthResponse | null> | null = null;
@@ -18,9 +25,10 @@ export const getAccessToken = () => accessToken;
 async function send<T>(path: string, init: RequestInit = {}): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(path, {
+    res = await fetch(API_URL + path, {
       ...init,
-      credentials: 'same-origin',
+      // Khác origin (production) thì phải "include" mới gửi/nhận cookie refresh.
+      credentials: API_URL ? 'include' : 'same-origin',
       headers: {
         ...(init.body ? { 'Content-Type': 'application/json' } : {}),
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
@@ -84,4 +92,5 @@ export const api = {
   resetPassword: (token: string, password: string) =>
     post<void>('/api/auth/reset', { token, password }),
   me: () => authed<{ user: PublicUser }>('/api/me'),
+  online: () => send<{ total: number; areas: Record<string, number> }>('/api/online'),
 };

@@ -42,8 +42,11 @@ export class ResendMailer implements Mailer {
   }
 }
 
-export function createMailer(config: Config, log: FastifyBaseLogger): Mailer {
-  return config.RESEND_API_KEY
-    ? new ResendMailer(config.RESEND_API_KEY, config.MAIL_FROM)
-    : new ConsoleMailer(log);
+/**
+ * Production không cấu hình email (vd. bản miễn phí không có tên miền riêng) → null:
+ * chức năng quên mật khẩu tắt. Dev/test: in email ra log.
+ */
+export function createMailer(config: Config, log: FastifyBaseLogger): Mailer | null {
+  if (config.RESEND_API_KEY) return new ResendMailer(config.RESEND_API_KEY, config.MAIL_FROM);
+  return config.NODE_ENV === 'production' ? null : new ConsoleMailer(log);
 }

@@ -1,11 +1,19 @@
 import { Client, type Room } from 'colyseus.js';
 import type { AreaId } from '@chua/shared';
-import { api, getAccessToken } from './api';
+import { API_URL, api, getAccessToken } from './api';
 
-// Dev: kết nối thẳng tới game server; production đặt VITE_GAME_URL (vd. wss://api.chua.example.com).
+// Game server chạy chung với API:
+// - API ở địa chỉ riêng (VITE_API_URL) → cùng địa chỉ đó (https → wss);
+// - production cùng địa chỉ với trang (server phục vụ luôn trang web) → chính trang này;
+// - dev: kết nối thẳng cổng 2567. VITE_GAME_URL để ghi đè nếu cần.
+const wsScheme = location.protocol === 'https:' ? 'wss' : 'ws';
 const GAME_URL =
   import.meta.env.VITE_GAME_URL ??
-  `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:2567`;
+  (API_URL
+    ? API_URL.replace(/^http/, 'ws')
+    : import.meta.env.DEV
+      ? `${wsScheme}://${location.hostname}:2567`
+      : `${wsScheme}://${location.host}`);
 
 export interface RemotePlayer {
   name: string;

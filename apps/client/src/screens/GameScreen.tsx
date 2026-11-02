@@ -11,6 +11,7 @@ import {
 } from '@chua/shared';
 import type Phaser from 'phaser';
 import { joinArea, reconnect, type TempleRoom } from '../net/game';
+import { api } from '../net/api';
 import { createGame } from '../game/createGame';
 import { logout } from '../auth/session';
 import { LotusLogo } from '../ui/icons';
@@ -265,9 +266,9 @@ function useOnlineTotal() {
   useEffect(() => {
     let alive = true;
     const load = () =>
-      fetch('/api/online')
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d: { total: number } | null) => alive && d && setTotal(d.total))
+      api
+        .online()
+        .then((d) => alive && setTotal(d.total))
         .catch(() => {});
     void load();
     const t = setInterval(load, 15_000);

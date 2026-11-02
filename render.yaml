@@ -1,0 +1,37 @@
+# Render Blueprint — deploy miễn phí (xem DEPLOY.md).
+# Render đọc file này để tự tạo web service (Docker) và Redis (Key Value) miễn phí.
+# Postgres dùng Neon (miễn phí, không hết hạn) — dán chuỗi kết nối khi Render hỏi.
+services:
+  - type: web
+    name: chua-an-lac
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./apps/server/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: TRUST_PROXY_HOPS
+        value: '1'
+      - key: DATABASE_URL
+        sync: false # Render hỏi khi tạo: dán chuỗi kết nối Neon
+      - key: JWT_ACCESS_SECRET
+        generateValue: true # Render tự sinh chuỗi bí mật ngẫu nhiên
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: chua-an-lac-redis
+          property: connectionString
+
+  - type: keyvalue
+    name: chua-an-lac-redis
+    plan: free
+    region: singapore
+    # Chỉ cho các service trong cùng tài khoản Render kết nối.
+    ipAllowList: []
+    maxmemoryPolicy: allkeys-lru

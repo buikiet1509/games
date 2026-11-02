@@ -13,6 +13,10 @@ design/          Thiết kế giao diện (PDF)
 
 Hạ tầng production: Fly.io (game server), Neon (Postgres), Upstash (Redis), Cloudflare Pages (client).
 
+## Deploy
+
+Hướng dẫn từng bước trong [DEPLOY.md](DEPLOY.md): **miễn phí** với Render + Neon (một địa chỉ, không cần tên miền), hoặc trả phí với Fly.io khi cần chạy 24/7 và nhiều máy. Image Docker chứa cả server lẫn bản build client; server phục vụ luôn trang web và tự chạy migration khi khởi động.
+
 ## Chạy local
 
 Yêu cầu: Node ≥ 22, pnpm 9 (`npm i -g pnpm@9`), Docker (OrbStack hoặc Docker Desktop).
