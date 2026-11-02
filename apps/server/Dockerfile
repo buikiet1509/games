@@ -29,7 +29,7 @@ COPY --from=build /out/package.json ./
 COPY --from=build /out/prisma ./prisma
 COPY --from=build /repo/apps/server/dist ./dist
 COPY --from=build /repo/apps/client/dist ./public
-COPY apps/server/start.sh ./start.sh
+COPY apps/server/start.sh apps/server/db-url.mjs ./
 USER node
 EXPOSE 2567
 # Chạy migration (có khoá, nhiều máy cùng chạy vẫn an toàn) rồi khởi động server.

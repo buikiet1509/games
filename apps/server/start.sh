@@ -3,6 +3,10 @@
 # và kịp ghi nốt phước/lời nguyện đang chờ.
 set -e
 
+# Nền tảng không có IPv6 ra ngoài (Render): kết nối database qua IPv4 (xem db-url.mjs).
+DATABASE_URL="$(node db-url.mjs)"
+export DATABASE_URL
+
 # Neon bản miễn phí tự ngủ khi vắng; lần kết nối đầu phải chờ máy thức dậy, lâu hơn mức
 # 5 giây mặc định của Prisma (lỗi P1001). Neon khuyên tăng connect_timeout.
 case "$DATABASE_URL" in
